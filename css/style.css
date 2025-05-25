@@ -405,6 +405,99 @@ table {
   margin: 20px 0;
 }
 
+.task-description-text h1,
+.task-description-text h2,
+.task-description-text h3,
+.task-description-text h4,
+.task-description-text h5,
+.task-description-text h6 {
+  margin: 10px 0;
+  font-weight: bold;
+}
+
+.task-description-text h1 {
+  font-size: 2em;
+}
+
+.task-description-text h2 {
+  font-size: 1.5em;
+}
+
+.task-description-text h3 {
+  font-size: 1.17em;
+}
+
+.task-description-text h4 {
+  font-size: 1em;
+}
+
+.task-description-text h5 {
+  font-size: 0.83em;
+}
+
+.task-description-text h6 {
+  font-size: 0.67em;
+}
+
+.task-description-text ul,
+.task-description-text ol {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.task-description-text ul {
+  list-style-type: disc;
+}
+
+.task-description-text ol {
+  list-style-type: decimal;
+}
+
+.task-description-text li {
+  margin: 5px 0;
+}
+
+.task-description-text strong {
+  font-weight: bold;
+}
+
+.task-description-text em {
+  font-style: italic;
+}
+
+.task-description-text code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.task-description-text blockquote {
+  margin: 10px 0;
+  padding: 10px;
+  border-left: 4px solid #ddd;
+  background-color: #f9f9f9;
+}
+
+.task-description-text input[type=checkbox] {
+  margin-right: 5px;
+}
+
+.task-description-text hr {
+  margin: 10px 0;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+
+.task-description-text a {
+  color: #2196F3;
+  text-decoration: none;
+}
+
+.task-description-text a:hover {
+  text-decoration: underline;
+}
+
 .stats-section {
   margin-top: 40px;
   padding: 20px;
