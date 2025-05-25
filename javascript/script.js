@@ -226,6 +226,7 @@ function updateUI() {
     updateCategorySelectors();  //Обновление всех выпадающих списков категорий
     renderTasks();  // Отрисовка всех задач
     updateStats();  // Обновление статистики на вкладке "Статистика"
+    saveTasks();
 };
 
 // Функция загрузки категорий из localStorage
@@ -815,6 +816,7 @@ function addTask() {
 
 // Функция сохранения задач
 function saveTasks() {
+    console.log('save');
     localStorage.setItem('todoTasks', JSON.stringify(tasks));
     localStorage.setItem('todoCategories', JSON.stringify(categories));
 }
