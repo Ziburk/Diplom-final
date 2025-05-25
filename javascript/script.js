@@ -1,6 +1,7 @@
 import ToastUIEditor from '@toast-ui/editor';
 import Editor from '@toast-ui/editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
+const db = require('./db-client');
 
 //-----------------------------------------------------------------------------------
 // Переменные и константы
@@ -64,7 +65,7 @@ const PRODUCTIVITY_PERIODS = {
 };
 
 // Категория, которая будет даваться задачам по умолчанию
-const defaultCategoryId = 'other';
+const defaultCategoryId = 1; // ID категории "Общее" из базы данных
 
 // Переменные, связанные с фильтрацией категорий
 let currentCategoryFilter = 'all';  // Фильтр по конкретной категории
@@ -95,6 +96,71 @@ const EXPORT_PRODUCTIVITY_TYPES = {
     CUSTOM: 'custom'
 };
 
+// Текущий пользователь (временно)
+let currentUserId = 1;
+
+// Обработчик переключения пользователя
+document.getElementById('switch-user').addEventListener('click', async () => {
+    currentUserId = currentUserId === 1 ? 2 : 1;
+    document.getElementById('switch-user').textContent = `Переключить пользователя (ID: ${currentUserId})`;
+    await loadUserData();
+});
+
+// Функция загрузки данных пользователя
+async function loadUserData() {
+    try {
+        const [userCategories, userTasks] = await Promise.all([
+            db.getUserCategories(currentUserId),
+            db.getUserTasks(currentUserId)
+        ]);
+
+        // Преобразуем категории в нужный формат
+        categories = {};
+        userCategories.forEach(category => {
+            categories[category.id] = {
+                id: category.id,
+                name: category.name,
+                color: category.color
+            };
+        });
+
+        // Убедимся, что категория по умолчанию существует
+        if (!categories[defaultCategoryId]) {
+            categories[defaultCategoryId] = {
+                id: defaultCategoryId,
+                name: 'Общее',
+                color: '#607D8B'
+            };
+        }
+
+        // Преобразуем задачи в нужный формат
+        tasks = {
+            active: [],
+            completed: []
+        };
+
+        userTasks.forEach(task => {
+            const taskObj = {
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                category_id: task.category_id,
+                dueDate: task.due_date,
+                originalPosition: task.original_position
+            };
+
+            if (task.is_completed) {
+                tasks.completed.push(taskObj);
+            } else {
+                tasks.active.push(taskObj);
+            }
+        });
+
+        updateUI();
+    } catch (err) {
+        console.error('Ошибка при загрузке данных пользователя:', err);
+    }
+}
 
 //-----------------------------------------------------------------------------------
 
@@ -102,11 +168,10 @@ const EXPORT_PRODUCTIVITY_TYPES = {
 // Функции
 
 // Главная функция всей программы. Инициализация компонентов и присваивание событий
-const init = () => {
-    loadCategories(); // Загружаем категории
-    loadTasks(); // Загружаем задачи
-    initTabs(); // Инициализация вкладок
-    setupDragAndDrop(); // Инициализация логики перетаскивания задач
+const init = async () => {
+    await loadUserData();
+    initTabs();
+    setupDragAndDrop();
 
     // Добавляем обработчик кнопке управления категория
     document.querySelector('.category-manager-btn').addEventListener('click', showCategoryManager);
@@ -423,7 +488,7 @@ function setupDragAndDrop() {
 }
 
 // Функция обновления порядка задач после перетаскивания
-function updateTaskOrder(list) {
+async function updateTaskOrder(list) {
     const isCompleted = list.id === 'completed-tasks-list';
     const taskArray = isCompleted ? tasks.completed : tasks.active;
     const newTaskArray = [];
@@ -460,6 +525,16 @@ function updateTaskOrder(list) {
         element.dataset.originalIndex = index;
     });
 
+    try {
+        // Обновляем позиции в базе данных
+        await db.updateTaskPositions(newTaskArray.map((task, index) => ({
+            id: task.id,
+            position: index
+        })));
+    } catch (err) {
+        console.error('Ошибка при обновлении позиций задач:', err);
+    }
+
     saveTasks();
 }
 
@@ -483,8 +558,8 @@ function renderTasks() {
 
         // Отбор по категориям
         if (currentCategoryFilter !== 'all') {
-            const taskCategory = task.category || defaultCategoryId;
-            if (taskCategory !== currentCategoryFilter) return false;
+            const taskCategory = task.category_id || defaultCategoryId;
+            if (parseInt(taskCategory) !== parseInt(currentCategoryFilter)) return false;
         }
 
         // Отбор по дате
@@ -520,7 +595,6 @@ function renderTasks() {
 
 // Функция создания самой задачи
 function createTaskElement(task, index, isCompleted) {
-
     // Создает задачу (элемент списка) и задаем есть параметры
     const taskElement = document.createElement('li');
     taskElement.className = `task task${index} ${isCompleted ? 'completed-task' : ''}`;
@@ -528,7 +602,7 @@ function createTaskElement(task, index, isCompleted) {
     taskElement.dataset.isCompleted = isCompleted;
     taskElement.draggable = true; // Добавляем возможность перетаскивания
 
-    const categoryId = task.category || defaultCategoryId;
+    const categoryId = parseInt(task.category_id) || defaultCategoryId;
     taskElement.dataset.category = categoryId;
     const category = categories[categoryId] || categories[defaultCategoryId];
 
@@ -632,24 +706,34 @@ function renderCategoriesList(container) {
         container.appendChild(categoryElement);
 
         // Обработчик события для изменения имени категории
-        categoryElement.querySelector('.category-name').addEventListener('change', (e) => {
-            categories[category.id].name = e.target.value;
-            saveCategories();
-            updateCategorySelectors();
-            renderTasks();
+        categoryElement.querySelector('.category-name').addEventListener('change', async (e) => {
+            try {
+                await updateCategory(category.id, e.target.value, category.color);
+            } catch (err) {
+                e.target.value = category.name; // Возвращаем старое значение при ошибке
+            }
         });
 
         // Обработчик события для изменения цвета категории
-        categoryElement.querySelector('.category-color-picker').addEventListener('input', (e) => {
-            categories[category.id].color = e.target.value;
-            saveCategories();
-            renderTasks();
+        categoryElement.querySelector('.category-color-picker').addEventListener('input', async (e) => {
+            try {
+                await updateCategory(category.id, category.name, e.target.value);
+            } catch (err) {
+                e.target.value = category.color; // Возвращаем старый цвет при ошибке
+            }
         });
 
         // Обработчик события для удаления категории
-        categoryElement.querySelector('.delete-category').addEventListener('click', () => {
-            deleteCategory(category.id);
-            renderCategoriesList(container);
+        categoryElement.querySelector('.delete-category').addEventListener('click', async () => {
+            try {
+                await db.deleteCategory(category.id);
+                delete categories[category.id];
+                renderCategoriesList(container);
+                updateUI();
+            } catch (err) {
+                console.error('Ошибка при удалении категории:', err);
+                alert('Не удалось удалить категорию');
+            }
         });
     });
 }
@@ -680,8 +764,7 @@ function updateCategorySelectors() {
 }
 
 // Функция добавления новой категории
-function addNewCategory() {
-    const newId = generateId();
+async function addNewCategory() {
     const categoryNumber = Object.keys(categories).length;
 
     // Список цветов, которые могут быть по стандарту присвоены новой категории
@@ -693,31 +776,35 @@ function addNewCategory() {
 
     const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
 
-    // Создание объекта категории
-    const newCategory = {
-        id: newId,
-        name: `Категория-${categoryNumber}`,
-        color: randomColor
-    };
+    try {
+        // Создаем новую категорию в базе данных
+        const newCategory = await db.addCategory(currentUserId, `Категория-${categoryNumber}`, randomColor);
 
-    categories[newId] = newCategory;
-    saveCategories();
+        // Добавляем категорию в локальный объект
+        categories[newCategory.id] = {
+            id: newCategory.id,
+            name: newCategory.name,
+            color: newCategory.color
+        };
 
-    const manager = document.querySelector('.category-manager-modal');
-    if (manager) {
-        renderCategoriesList(manager.querySelector('.categories-list'));
+        const manager = document.querySelector('.category-manager-modal');
+        if (manager) {
+            renderCategoriesList(manager.querySelector('.categories-list'));
 
-        // Находим только что созданную категорию и фокусируемся на поле ввода
-        const newCategoryElement = manager.querySelector(`.category-item:last-child`);
-        if (newCategoryElement) {
-            const nameInput = newCategoryElement.querySelector('.category-name');
-            nameInput.focus();
-            nameInput.select(); // Выделяем весь текст для удобства переименования
-            manager.querySelector('#add-new-category-down').scrollIntoView({ behavior: 'smooth' });
+            // Находим только что созданную категорию и фокусируемся на поле ввода
+            const newCategoryElement = manager.querySelector(`.category-item:last-child`);
+            if (newCategoryElement) {
+                const nameInput = newCategoryElement.querySelector('.category-name');
+                nameInput.focus();
+                nameInput.select(); // Выделяем весь текст для удобства переименования
+                manager.querySelector('#add-new-category-down').scrollIntoView({ behavior: 'smooth' });
+            }
         }
+        updateCategorySelectors();
+    } catch (err) {
+        console.error('Ошибка при создании категории:', err);
+        alert('Не удалось создать категорию');
     }
-    updateCategorySelectors();
-
 }
 
 // Функция для создания уникального ID у категории
@@ -746,18 +833,14 @@ function deleteCategory(categoryId) {
 }
 
 // Функция добавления новой задачи
-function addTask() {
-
-    // Создаем элемент списка и присваимаем ему класс
+async function addTask() {
     const newTask = document.createElement('li');
     newTask.className = "task new-task";
 
-    // Преобразуем объект категорий в массив для рендеринга options
     const categoryOptions = Object.values(categories).map(cat =>
         `<option class="new-task-category-option" value="${cat.id}">${cat.name}</option>`
     ).join('');
 
-    // Создаем "форму" для создания новой задачи
     newTask.innerHTML = `
         <div class="task-title-wrapper">
             <img class="new-task-ico" src="img/task-ico.png" alt="check">
@@ -769,11 +852,9 @@ function addTask() {
         <input type="date" class="new-task-due-date">
     `;
 
-    // Добавляем "форму" создания задачи в начало списка текущих задач
     const taskList = document.querySelector('#current-tasks-list');
     taskList.prepend(newTask);
 
-    // Фокусируемся и создаем обработчики для сохранения введенного названия новой задачи
     const newTitle = newTask.querySelector('.new-task-title');
     newTitle.focus();
 
@@ -783,7 +864,7 @@ function addTask() {
         }
     });
 
-    newTitle.addEventListener('blur', (e) => {
+    newTitle.addEventListener('blur', async (e) => {
         const selectCat = newTask.querySelector('.new-task-category');
         const dueDateInput = newTask.querySelector('.new-task-due-date');
 
@@ -793,30 +874,38 @@ function addTask() {
         }
 
         if (newTitle.value) {
-            const taskTitleText = newTitle.value;
-            const taskDesc = '';
-            const taskCategory = newTask.querySelector('.new-task-category').value;
-            const dueDate = dueDateInput.value || null;
+            try {
+                const taskTitleText = newTitle.value;
+                const taskDesc = '';
+                const taskCategory = newTask.querySelector('.new-task-category').value;
+                const dueDate = dueDateInput.value || null;
 
-            tasks.active.unshift({
-                title: taskTitleText,
-                description: taskDesc,
-                category: taskCategory,
-                dueDate: dueDate,
-                originalPosition: tasks.active.length
-            });
+                const newTaskData = await db.addTask(
+                    currentUserId,
+                    taskTitleText,
+                    taskCategory,
+                    taskDesc,
+                    dueDate,
+                    0
+                );
 
-            updateUI();
-        } else {
-            newTask.remove();
+                // Добавляем задачу в локальный массив
+                tasks.active.unshift({
+                    id: newTaskData.id,
+                    title: taskTitleText,
+                    description: taskDesc,
+                    category_id: parseInt(taskCategory),
+                    dueDate: dueDate,
+                    originalPosition: 0
+                });
+
+                updateUI();
+            } catch (err) {
+                console.error('Ошибка при добавлении задачи:', err);
+                alert('Не удалось добавить задачу');
+            }
         }
     });
-};
-
-// Функция сохранения задач
-function saveTasks() {
-    localStorage.setItem('todoTasks', JSON.stringify(tasks));
-    localStorage.setItem('todoCategories', JSON.stringify(categories));
 }
 
 // Функция редактирования задачи
@@ -846,7 +935,7 @@ function changeTask(event) {
             const option = document.createElement('option');
             option.value = cat.id;
             option.textContent = cat.name;
-            if (cat.id === currentCategoryId) option.selected = true;
+            if (parseInt(cat.id) === parseInt(currentCategoryId)) option.selected = true;
             categorySelect.appendChild(option);
         });
 
@@ -866,22 +955,40 @@ function changeTask(event) {
         let newCategory = currentCategoryId;
         let newTitle = currentTitleText;
 
-        const saveChanges = () => {
+        const saveChanges = async () => {
             if (isSaved) return;
             isSaved = true;
 
             const taskElement = event.target.closest('.task');
             const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
 
-            if (taskElement.classList.contains('completed-task')) {
-                tasks.completed[taskIndex].title = newTitle;
-                tasks.completed[taskIndex].category = newCategory;
-            } else {
-                tasks.active[taskIndex].title = newTitle;
-                tasks.active[taskIndex].category = newCategory;
+            try {
+                if (taskElement.classList.contains('completed-task')) {
+                    if (tasks.completed[taskIndex]) {
+                        const task = tasks.completed[taskIndex];
+                        await db.updateTask(task.id, {
+                            title: newTitle,
+                            category_id: parseInt(newCategory)
+                        });
+                        task.title = newTitle;
+                        task.category_id = parseInt(newCategory);
+                    }
+                } else {
+                    if (tasks.active[taskIndex]) {
+                        const task = tasks.active[taskIndex];
+                        await db.updateTask(task.id, {
+                            title: newTitle,
+                            category_id: parseInt(newCategory)
+                        });
+                        task.title = newTitle;
+                        task.category_id = parseInt(newCategory);
+                    }
+                }
+                updateUI();
+            } catch (err) {
+                console.error('Ошибка при обновлении задачи:', err);
+                alert('Не удалось обновить задачу');
             }
-
-            updateUI();
         };
 
         taskTitleInput.addEventListener('input', (e) => {
@@ -918,7 +1025,183 @@ function changeTask(event) {
     }
 };
 
-// Функция сортировки задач по дату
+// Функция для получения данных по категориям
+function getDataByCategory(completed) {
+    const taskList = completed ? tasks.completed : tasks.active;
+    const categoryCounts = {};
+
+    // Считаем задачи по категориям
+    taskList.forEach(task => {
+        const categoryId = parseInt(task.category_id) || defaultCategoryId;
+        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+    });
+
+    // Формируем данные для диаграммы
+    const labels = [];
+    const data = [];
+    const backgroundColors = [];
+
+    Object.keys(categories).forEach(categoryId => {
+        if (categoryCounts[categoryId]) {
+            labels.push(categories[categoryId].name);
+            data.push(categoryCounts[categoryId]);
+            backgroundColors.push(categories[categoryId].color);
+        }
+    });
+
+    return { labels, data, backgroundColors };
+}
+
+// Функция для добавления диаграммы в PDF
+async function addChartToPdf(docDefinition, exportTasks, chartType) {
+    // Создаем данные для диаграммы
+    let chartData;
+    let chartTitle;
+
+    if (chartType === EXPORT_CHART_TYPES.COMPLETION) {
+        chartTitle = 'Соотношение выполненных и активных задач';
+        chartData = {
+            labels: ['Выполненные', 'Активные'],
+            datasets: [
+                {
+                    data: [exportTasks.completed.length, exportTasks.active.length],
+                    backgroundColor: ['#4CAF50', '#FF9800']
+                }
+            ]
+        };
+    } else if (chartType === EXPORT_CHART_TYPES.BY_CATEGORY) {
+        chartTitle = 'Распределение задач по категориям';
+
+        // Собираем данные по категориям
+        const categoryCounts = {};
+        const categoryColors = {};
+
+        // Обрабатываем активные задачи
+        exportTasks.active.forEach(task => {
+            const categoryId = parseInt(task.category_id) || defaultCategoryId;
+            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+            if (!categoryColors[categoryId]) {
+                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
+            }
+        });
+
+        // Обрабатываем выполненные задачи
+        exportTasks.completed.forEach(task => {
+            const categoryId = parseInt(task.category_id) || defaultCategoryId;
+            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+            if (!categoryColors[categoryId]) {
+                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
+            }
+        });
+
+        // Формируем данные для диаграммы
+        const labels = [];
+        const data = [];
+        const backgroundColors = [];
+
+        Object.keys(categoryCounts).forEach(categoryId => {
+            const category = categories[categoryId] || categories[defaultCategoryId];
+            labels.push(category.name);
+            data.push(categoryCounts[categoryId]);
+            backgroundColors.push(categoryColors[categoryId]);
+        });
+
+        chartData = {
+            labels: labels,
+            datasets: [
+                {
+                    data: data,
+                    backgroundColor: backgroundColors
+                }
+            ]
+        };
+    }
+
+    // Добавляем заголовок диаграммы
+    docDefinition.content.push({
+        text: chartTitle,
+        style: 'subheader',
+        margin: [0, 20, 0, 10]
+    });
+
+    try {
+        // Получаем изображение диаграммы
+        const chartImage = await getChartImage(chartData);
+
+        // Добавляем саму диаграмму
+        docDefinition.content.push({
+            image: chartImage,
+            width: 400,
+            alignment: 'center',
+            margin: [0, 0, 0, 20]
+        });
+
+        // Добавляем легенду
+        const legendItems = [];
+        chartData.labels.forEach((label, index) => {
+            legendItems.push({
+                text: `${label}: ${chartData.datasets[0].data[index]}`,
+                margin: [0, 0, 0, 5]
+            });
+        });
+
+        docDefinition.content.push({
+            stack: legendItems,
+            margin: [50, 0, 0, 20]
+        });
+    } catch (error) {
+        console.error('Ошибка при создании диаграммы:', error);
+        docDefinition.content.push({
+            text: 'Не удалось создать диаграмму',
+            color: 'red',
+            margin: [0, 0, 0, 20]
+        });
+    }
+}
+
+// Функция для добавления задачи в PDF
+function addTaskToPdf(docDefinition, task, isCompleted) {
+    const categoryId = parseInt(task.category_id) || defaultCategoryId;
+    const category = categories[categoryId] || categories[defaultCategoryId];
+
+    docDefinition.content.push({
+        text: task.title || 'Без названия',
+        style: 'taskTitle'
+    });
+
+    docDefinition.content.push({
+        text: `Категория: ${category.name}`,
+        style: 'categoryLabel',
+        color: category.color
+    });
+
+    if (task.dueDate) {
+        docDefinition.content.push({
+            text: `Срок: ${formatDate(task.dueDate)}`,
+            style: 'taskDate'
+        });
+    }
+
+    if (task.description) {
+        docDefinition.content.push({
+            text: task.description,
+            style: 'taskDescription'
+        });
+    }
+
+    docDefinition.content.push({
+        text: `Статус: ${isCompleted ? 'Выполнена' : 'Активна'}`,
+        style: 'taskDate',
+        margin: [0, 0, 0, 10]
+    });
+
+    docDefinition.content.push({
+        canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, lineColor: '#eee' }],
+        margin: [0, 5, 0, 5]
+    });
+}
+
+// Функция сортировки задач по дате
 function sortTasksByDate(tasksArray) {
     const sortType = document.getElementById('date-sort').value;
     const today = new Date();
@@ -956,457 +1239,10 @@ function sortTasksByDate(tasksArray) {
     return [...sortedTasks, ...tasksWithoutDate];
 }
 
-// Вспомогательная функция для поиска ID категории по имени
-function getCategoryIdByName(name) {
-    for (const [id, category] of Object.entries(categories)) {
-        if (category.name === name) return id;
-    }
-    return null;
-}
-
-// Функция инициализации редактора описания
-function initEditorForTask(taskElement) {
-    if (!taskElement) return; // Защита от null
-
-    const index = taskElement.dataset.originalIndex; // Исправлено с dataset.index на dataset.originalIndex
-    const isCompleted = taskElement.classList.contains('completed-task');
-    const task = isCompleted ? tasks.completed[index] : tasks.active[index];
-
-    if (!task) return; // Защита от несуществующей задачи
-
-    const editorId = `editor-${index}`;
-    const editorContainer = taskElement.querySelector(`#${editorId}`);
-    const textDescription = taskElement.querySelector('.task-description-text');
-    const editorButtons = taskElement.querySelector('.editor-buttons');
-
-    // Проверяем существование всех необходимых элементов
-    if (!editorContainer || !textDescription || !editorButtons) return;
-
-    // Если редактор уже инициализирован, просто показываем его
-    if (activeEditors[editorId]) {
-        editorContainer.classList.remove('hidden');
-        editorButtons.classList.remove('hidden');
-        textDescription.classList.add('hidden');
-        return;
-    }
-
-    // Скрываем текстовое описание и показываем редактор
-    textDescription.classList.add('hidden');
-    editorContainer.classList.remove('hidden');
-    editorButtons.classList.remove('hidden');
-
-    try {
-        // Инициализируем редактор с автоматической высотой
-        //const Editor = toastui.Editor;
-        const editor = new Editor({
-            el: editorContainer,
-            initialValue: task.description || '',
-            previewStyle: 'tab',
-            height: 'auto',
-            minHeight: '100px',
-            initialEditType: 'wysiwyg',
-            hideModeSwitch: true,
-            toolbarItems: [
-                ['heading', 'bold', 'italic', 'strike'],
-                ['hr', 'quote'],
-                ['ul', 'ol', 'task'],
-                ['link'],
-            ]
-        });
-
-        // Сохраняем ссылку на редактор
-        activeEditors[editorId] = editor;
-    } catch (e) {
-        console.error('Ошибка при инициализации редактора:', e);
-        // Восстанавливаем исходное состояние при ошибке
-        textDescription.classList.remove('hidden');
-        editorContainer.classList.add('hidden');
-        editorButtons.classList.add('hidden');
-    }
-}
-
-// Функция сохранения описания
-function saveTaskDescription(event) {
-    const taskElement = event.target.closest('.task');
-    if (!taskElement) return;
-
-    const index = parseInt(taskElement.dataset.originalIndex);
-    if (isNaN(index)) return;
-
-    const isCompleted = taskElement.classList.contains('completed-task');
-    const editorId = `editor-${index}`;
-    const editor = activeEditors[editorId];
-
-    if (!editor) return;
-
-    const editorContainer = taskElement.querySelector(`#${editorId}`);
-    const textDescription = taskElement.querySelector('.task-description-text');
-    const editorButtons = taskElement.querySelector('.editor-buttons');
-
-    if (!editorContainer || !textDescription || !editorButtons) return;
-
-    try {
-        const newDescription = editor.getMarkdown();
-
-        if (isCompleted) {
-            if (tasks.completed[index]) {
-                tasks.completed[index].description = newDescription;
-            }
-        } else {
-            if (tasks.active[index]) {
-                tasks.active[index].description = newDescription;
-            }
-        }
-
-        saveTasks();
-
-        // Обновляем текстовое представление
-        textDescription.innerHTML = newDescription || 'Нет описания';
-        textDescription.classList.remove('hidden');
-        editorContainer.classList.add('hidden');
-        editorButtons.classList.add('hidden');
-
-        // Уничтожаем редактор
-        destroyEditor(editorId);
-    } catch (e) {
-        console.error('Ошибка при сохранении описания:', e);
-    }
-}
-
-// Функция отмены редактирования описания
-function cancelTaskDescriptionEditing(event) {
-    const taskElement = event.target.closest('.task');
-    if (!taskElement) return;
-
-    const index = parseInt(taskElement.dataset.originalIndex);
-    if (isNaN(index)) return;
-
-    const editorId = `editor-${index}`;
-    const editorContainer = taskElement.querySelector(`#${editorId}`);
-    const textDescription = taskElement.querySelector('.task-description-text');
-    const editorButtons = taskElement.querySelector('.editor-buttons');
-
-    if (!editorContainer || !textDescription || !editorButtons) return;
-
-    // Возвращаем текстовое представление
-    textDescription.classList.remove('hidden');
-    editorContainer.classList.add('hidden');
-    editorButtons.classList.add('hidden');
-
-    // Уничтожаем редактор
-    destroyEditor(editorId);
-}
-
-// Функция, которая убирает текстовый редактор описания
-function destroyEditor(editorId) {
-    if (!editorId || !activeEditors[editorId]) return;
-
-    try {
-        activeEditors[editorId].destroy();
-        delete activeEditors[editorId];
-    } catch (e) {
-        console.error('Ошибка при уничтожении редактора:', e);
-    }
-}
-
-// Функция изменения даты у задачи
-function changeTaskDate(event) {
-    const taskElement = event.target.closest('.task');
-    if (!taskElement) return; // Защита от null
-
-    const dateWrapper = taskElement.querySelector('.task-date-wrapper');
-    if (!dateWrapper) return; // Защита от null
-
-    const currentDateSpan = dateWrapper.querySelector('.task-due-date');
-    const changeDateBtn = dateWrapper.querySelector('.task-change-date');
-    if (!currentDateSpan || !changeDateBtn) return; // Защита от null
-
-    const originalDate = currentDateSpan.textContent;
-
-    const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.className = 'task-date-input';
-
-    if (originalDate !== 'Без срока') {
-        const [day, month, year] = originalDate.split('.');
-        dateInput.value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-
-    currentDateSpan.replaceWith(dateInput);
-    changeDateBtn.classList.add('hidden');
-
-    dateInput.focus();
-
-    const saveDate = () => {
-        const newDate = dateInput.value || null;
-        const taskIndex = parseInt(taskElement.dataset.originalIndex);
-        const isCompleted = taskElement.classList.contains('completed-task');
-
-        if (isCompleted) {
-            if (tasks.completed[taskIndex]) {
-                tasks.completed[taskIndex].dueDate = newDate;
-            }
-        } else {
-            if (tasks.active[taskIndex]) {
-                tasks.active[taskIndex].dueDate = newDate;
-            }
-        }
-
-        saveTasks();
-        renderTasks();
-
-        // Удаляем обработчик после сохранения
-        document.removeEventListener('click', handleOutsideClick);
-    };
-
-    const cancelDateEdit = () => {
-        const newSpan = document.createElement('span');
-        newSpan.className = 'task-due-date';
-        newSpan.textContent = originalDate;
-
-        dateInput.replaceWith(newSpan);
-        changeDateBtn.classList.remove('hidden');
-
-        // Удаляем обработчик после отмены
-        document.removeEventListener('click', handleOutsideClick);
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            saveDate();
-        } else if (e.key === 'Escape') {
-            cancelDateEdit();
-        }
-    };
-
-    const handleOutsideClick = (e) => {
-        if (!dateWrapper.contains(e.target) && e.target !== changeDateBtn) {
-            saveDate();
-        }
-    };
-
-    dateInput.addEventListener('blur', saveDate);
-    dateInput.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('click', handleOutsideClick);
-}
-
-// Функция для форматирование даты для отображения
-function formatDate(dateString) {
-    if (!dateString) return 'Без срока';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-}
-
-// Функция удаления задачи
-function deleteTask(event) {
-    // Получение задачи, у которой была нажата кнопка
-    const taskElement = event.target.closest('.task');
-    const taskList = taskElement.parentNode;
-    const isCompleted = taskElement.classList.contains('completed-task');
-
-    const taskIndex = Array.from(taskList.children).indexOf(taskElement);
-    if (isCompleted) {
-        tasks.completed.splice(taskIndex, 1);
-    } else {
-        tasks.active.splice(taskIndex, 1);
-    }
-
-    updateUI();
-};
-
-// Функция отметки задачи как выполненной/невыполненной
-function completeTask(event) {
-
-    // Получаем задачу, у которой нажата кнопка "отметки выполнения"
-    const currentTask = event.target.closest('.task');
-    if (!currentTask) return;
-
-    // Сохраняем все параметры задачи
-    const originalIndex = parseInt(currentTask.dataset.originalIndex);
-    const isCompleted = currentTask.dataset.isCompleted === 'true';
-    const now = Date.now();
-
-    try {
-        if (isCompleted) {
-            // Перемещаем из выполненных в активные
-            const task = tasks.completed[originalIndex];
-            if (task) {
-                // Восстанавливаем позицию
-                const originalPos = task.originalPosition !== undefined ?
-                    Math.min(task.originalPosition, tasks.active.length) : 0;
-
-                tasks.active.splice(originalPos, 0, task);
-                tasks.completed.splice(originalIndex, 1);
-            }
-        } else {
-            // Перемещаем из активных в выполненные
-            const task = tasks.active[originalIndex];
-            if (task) {
-                // Сохраняем текущую позицию
-                task.originalPosition = originalIndex;
-                task.lastStatusChange = now;
-                tasks.completed.unshift(task);
-                tasks.active.splice(originalIndex, 1);
-            }
-        }
-
-        updateUI();
-
-    } catch (e) {
-        console.error('Ошибка при перемещении задачи:', e);
-    }
-};
-
-// Функция инициализации диаграммы
-function initPieChart() {
-    const ctx = document.getElementById('pieChart').getContext('2d');
-
-    // Если диаграмма уже существует, уничтожаем ее
-    if (pieChart) {
-        pieChart.destroy();
-    }
-
-    // Получаем данные для выбранного типа диаграммы
-    const { labels, data, backgroundColors } = getChartData(currentChartType);
-
-    // Создает новую диаграмму
-    pieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: backgroundColors,
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-
-    updateChartLegend(labels, backgroundColors, data);
-}
-
-// Функция для получения данных в зависимости от типа диаграммы
-function getChartData(type) {
-    switch (type) {
-        case CHART_TYPES.COMPLETION:
-            return {
-                labels: ['Завершённые', 'Активные'],
-                data: [tasks.completed.length, tasks.active.length],
-                backgroundColors: ['#4CAF50', '#9E9E9E']
-            };
-
-        case CHART_TYPES.COMPLETED_BY_CATEGORY:
-            return getDataByCategory(true);
-
-        case CHART_TYPES.ACTIVE_BY_CATEGORY:
-            return getDataByCategory(false);
-
-        default:
-            return getChartData(CHART_TYPES.COMPLETION);
-    }
-}
-
-// Функция для получения данных по категориям
-function getDataByCategory(completed) {
-    const taskList = completed ? tasks.completed : tasks.active;
-    const categoryCounts = {};
-
-    // Считаем задачи по категориям
-    taskList.forEach(task => {
-        const categoryId = task.category || defaultCategoryId;
-        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-    });
-
-    // Формируем данные для диаграммы
-    const labels = [];
-    const data = [];
-    const backgroundColors = [];
-
-    Object.keys(categories).forEach(categoryId => {
-        if (categoryCounts[categoryId]) {
-            labels.push(categories[categoryId].name);
-            data.push(categoryCounts[categoryId]);
-            backgroundColors.push(categories[categoryId].color);
-        }
-    });
-
-    return { labels, data, backgroundColors };
-}
-
-// Функция для обновления легенды
-function updateChartLegend(labels, colors, data) {
-    const legendContainer = document.getElementById('chart-legend');
-    legendContainer.innerHTML = '';
-
-    let total = 0;
-
-    labels.forEach((label, index) => {
-        const legendItem = document.createElement('div');
-        legendItem.className = 'legend-item';
-
-        legendItem.innerHTML = `
-            <span class="legend-color" style="background-color: ${colors[index]}"></span>
-            <span class="legend-text">${label}: ${data[index]}</span>
-        `;
-
-        legendContainer.appendChild(legendItem);
-        total += data[index];
-    });
-
-    // Добавляем итоговую строку
-    const totalItem = document.createElement('div');
-    totalItem.className = 'legend-item total';
-    totalItem.innerHTML = `<span class="legend-text">Всего: ${total}</span>`;
-    legendContainer.appendChild(totalItem);
-}
-
-// Функция обновления статистики на вкладке "статистика"
-function updateStats() {
-    // Проверяем, существует ли диаграмма и активна ли вкладка статистики
-    const statsTabActive = document.getElementById('statistics').classList.contains('active');
-
-    // Обновляем счетчики только если они видны
-    if (statsTabActive) {
-        const completedCount = tasks.completed.length;
-        const activeCount = tasks.active.length;
-        const totalCount = completedCount + activeCount;
-
-        // Проверяем существование элементов перед обновлением
-        const completedElement = document.getElementById('completed-count');
-        const activeElement = document.getElementById('active-count');
-        const totalElement = document.getElementById('total-count');
-
-        if (completedElement) completedElement.textContent = completedCount;
-        if (activeElement) activeElement.textContent = activeCount;
-        if (totalElement) totalElement.textContent = totalCount;
-
-        // Если диаграмма активна - обновляем ее
-        if (pieChart) {
-            const { labels, data, backgroundColors } = getChartData(currentChartType);
-
-            pieChart.data.labels = labels;
-            pieChart.data.datasets[0].data = data;
-            pieChart.data.datasets[0].backgroundColor = backgroundColors;
-            pieChart.update();
-
-            updateChartLegend(labels, backgroundColors, data);
-        }
-    }
-
+// Обновление графика продуктивности
+function updateProductivityChart() {
     if (document.getElementById('statistics').classList.contains('active')) {
-        updateProductivityChart();
+        initProductivityChart();
     }
 }
 
@@ -1515,10 +1351,93 @@ function formatDateForChart(date) {
     });
 }
 
-// Обновление графика продуктивности
-function updateProductivityChart() {
-    if (document.getElementById('statistics').classList.contains('active')) {
-        initProductivityChart();
+// Функция для инициализации круговой диаграммы
+function initPieChart() {
+    const ctx = document.getElementById('pieChart').getContext('2d');
+
+    // Если диаграмма уже существует, уничтожаем её
+    if (pieChart) {
+        pieChart.destroy();
+    }
+
+    let chartData;
+    if (currentChartType === CHART_TYPES.COMPLETION) {
+        chartData = {
+            labels: ['Выполненные', 'Активные'],
+            datasets: [{
+                data: [tasks.completed.length, tasks.active.length],
+                backgroundColor: ['#4CAF50', '#FF9800']
+            }]
+        };
+    } else if (currentChartType === CHART_TYPES.COMPLETED_BY_CATEGORY) {
+        chartData = getDataByCategory(true);
+    } else {
+        chartData = getDataByCategory(false);
+    }
+
+    pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                data: chartData.data,
+                backgroundColor: chartData.backgroundColors || ['#4CAF50', '#FF9800']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Функция форматирования даты
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU');
+}
+
+// Функция обновления статистики
+function updateStats() {
+    // Обновляем счетчики задач
+    const totalTasksElement = document.querySelector('.total-tasks');
+    const completedTasksElement = document.querySelector('.completed-tasks');
+    const activeTasksElement = document.querySelector('.active-tasks');
+    const completionPercentageElement = document.querySelector('.completion-percentage');
+
+    if (totalTasksElement) {
+        totalTasksElement.textContent = tasks.active.length + tasks.completed.length;
+    }
+    
+    if (completedTasksElement) {
+        completedTasksElement.textContent = tasks.completed.length;
+    }
+    
+    if (activeTasksElement) {
+        activeTasksElement.textContent = tasks.active.length;
+    }
+
+    // Обновляем процент выполнения
+    if (completionPercentageElement) {
+        const totalTasks = tasks.active.length + tasks.completed.length;
+        const completionPercentage = totalTasks === 0 ? 0 : Math.round((tasks.completed.length / totalTasks) * 100);
+        completionPercentageElement.textContent = `${completionPercentage}%`;
+    }
+
+    // Обновляем диаграммы, если открыта вкладка статистики
+    const statisticsTab = document.getElementById('statistics');
+    if (statisticsTab && statisticsTab.classList.contains('active')) {
+        if (typeof initPieChart === 'function') {
+            initPieChart();
+        }
+        if (typeof updateProductivityChart === 'function') {
+            updateProductivityChart();
+        }
     }
 }
 
@@ -1530,267 +1449,173 @@ function initExportModal() {
         <div class="modal-content">
             <h3>Экспорт задач в PDF</h3>
             
-            <div class="export-options">
-                <label>Тип экспорта:</label>
-                <select id="export-type">
-                    <option value="${EXPORT_TYPES.SELECTED}">Только выбранные задачи</option>
+            <div class="export-section">
+                <h4>Выберите задачи для экспорта:</h4>
+                <select id="export-tasks-select">
                     <option value="${EXPORT_TYPES.ALL_TASKS}">Все задачи</option>
                     <option value="${EXPORT_TYPES.ALL_COMPLETED}">Все выполненные</option>
-                    <option value="${EXPORT_TYPES.ALL_ACTIVE}">Все невыполненные</option>
-                    <option value="${EXPORT_TYPES.BY_DATE_RANGE}">Задачи за период</option>
+                    <option value="${EXPORT_TYPES.ALL_ACTIVE}">Все активные</option>
+                    <option value="${EXPORT_TYPES.BY_DATE_RANGE}">По диапазону дат</option>
                 </select>
-                
-                <div id="date-range-options" class="hidden">
-                    <label>Период:</label>
-                    <input type="date" id="export-start-date">
-                    <span>по</span>
-                    <input type="date" id="export-end-date">
-                </div>
-                
-                <div id="selected-tasks-container">
-                    <label>Выберите задачи для экспорта:</label>
-                    <div id="selected-tasks-list" class="export-tasks-list"></div>
-                </div>
-                
-                <div class="export-chart-options">
-                    <label>Добавить диаграмму:</label>
-                    <select id="export-chart-type">
-                        <option value="${EXPORT_CHART_TYPES.NONE}">Нет</option>
-                        <option value="${EXPORT_CHART_TYPES.COMPLETION}">Выполненные/Невыполненные</option>
-                        <option value="${EXPORT_CHART_TYPES.BY_CATEGORY}">По категориям</option>
-                    </select>
-                </div>
-                
-                <div class="export-productivity-options">
-                    <label>Добавить график продуктивности:</label>
-                    <select id="export-productivity-type">
-                        <option value="${EXPORT_PRODUCTIVITY_TYPES.NONE}">Нет</option>
-                        <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_7_DAYS}">Последние 7 дней</option>
-                        <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_14_DAYS}">Последние 14 дней</option>
-                        <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_30_DAYS}">Последние 30 дней</option>
-                        <option value="${EXPORT_PRODUCTIVITY_TYPES.CUSTOM}">Выбрать период</option>
-                    </select>
-                    
-                    <div id="export-productivity-custom" class="hidden">
-                        <label>Период:</label>
-                        <input type="date" id="export-productivity-start-date">
-                        <span>по</span>
-                        <input type="date" id="export-productivity-end-date">
-                    </div>
-                </div>
             </div>
-            
+
+            <div id="date-range-selector" class="export-section hidden">
+                <label>С: <input type="date" id="export-start-date"></label>
+                <label>По: <input type="date" id="export-end-date"></label>
+            </div>
+
+            <div class="export-section">
+                <h4>Добавить диаграмму:</h4>
+                <select id="export-chart-select">
+                    <option value="${EXPORT_CHART_TYPES.NONE}">Без диаграммы</option>
+                    <option value="${EXPORT_CHART_TYPES.COMPLETION}">Выполненные/Активные</option>
+                    <option value="${EXPORT_CHART_TYPES.BY_CATEGORY}">По категориям</option>
+                </select>
+            </div>
+
+            <div class="export-section">
+                <h4>Добавить график продуктивности:</h4>
+                <select id="export-productivity-select">
+                    <option value="${EXPORT_PRODUCTIVITY_TYPES.NONE}">Без графика</option>
+                    <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_7_DAYS}">За последние 7 дней</option>
+                    <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_14_DAYS}">За последние 14 дней</option>
+                    <option value="${EXPORT_PRODUCTIVITY_TYPES.LAST_30_DAYS}">За последние 30 дней</option>
+                </select>
+            </div>
+
             <div class="modal-buttons">
-                <button id="generate-pdf-btn">Сгенерировать PDF</button>
-                <button id="close-export-modal">Закрыть</button>
+                <button id="generate-pdf">Сгенерировать PDF</button>
+                <button id="close-export-modal">Отмена</button>
             </div>
         </div>
     `;
 
     document.body.appendChild(modal);
 
-    // Сразу рендерим список задач для выбора
-    renderTasksForExportSelection();
+    // Обработчик для выбора типа экспорта
+    const exportSelect = modal.querySelector('#export-tasks-select');
+    const dateRangeSelector = modal.querySelector('#date-range-selector');
 
-    // Добавляем обработчики событий для модального окна
-    document.getElementById('export-type').addEventListener('change', (e) => {
-        const type = e.target.value;
-        document.getElementById('date-range-options').classList.toggle('hidden', type !== EXPORT_TYPES.BY_DATE_RANGE);
-        document.getElementById('selected-tasks-container').classList.toggle('hidden', type !== EXPORT_TYPES.SELECTED);
+    exportSelect.addEventListener('change', () => {
+        dateRangeSelector.classList.toggle('hidden', exportSelect.value !== EXPORT_TYPES.BY_DATE_RANGE);
+    });
 
-        if (type === EXPORT_TYPES.SELECTED) {
-            renderTasksForExportSelection();
+    // Обработчик для кнопки генерации PDF
+    modal.querySelector('#generate-pdf').addEventListener('click', () => {
+        const exportType = exportSelect.value;
+        const chartType = modal.querySelector('#export-chart-select').value;
+        const productivityType = modal.querySelector('#export-productivity-select').value;
+
+        let exportTasks = { active: [], completed: [] };
+
+        // Определяем, какие задачи экспортировать
+        if (exportType === EXPORT_TYPES.ALL_TASKS) {
+            exportTasks = tasks;
+        } else if (exportType === EXPORT_TYPES.ALL_COMPLETED) {
+            exportTasks.completed = tasks.completed;
+        } else if (exportType === EXPORT_TYPES.ALL_ACTIVE) {
+            exportTasks.active = tasks.active;
+        } else if (exportType === EXPORT_TYPES.BY_DATE_RANGE) {
+            const startDate = new Date(modal.querySelector('#export-start-date').value);
+            const endDate = new Date(modal.querySelector('#export-end-date').value);
+            endDate.setHours(23, 59, 59, 999);
+
+            exportTasks.active = tasks.active.filter(task => {
+                const taskDate = new Date(task.dueDate);
+                return taskDate >= startDate && taskDate <= endDate;
+            });
+
+            exportTasks.completed = tasks.completed.filter(task => {
+                const taskDate = new Date(task.dueDate);
+                return taskDate >= startDate && taskDate <= endDate;
+            });
         }
+
+        generatePDF(exportTasks, chartType, productivityType);
+        modal.remove();
     });
 
-    // Обработчик для выбора "типа" рафика продуктивности
-    document.getElementById('export-productivity-type').addEventListener('change', (e) => {
-        const type = e.target.value;
-        document.getElementById('export-productivity-custom').classList.toggle('hidden', type !== EXPORT_PRODUCTIVITY_TYPES.CUSTOM);
-    });
+    // Обработчик для кнопки закрытия
+    modal.querySelector('#close-export-modal').addEventListener('click', () => modal.remove());
 
-    // Обработчик для кнопки создания пдф, с ожидаением генерации файла
-    document.getElementById('generate-pdf-btn').addEventListener('click', async () => {
-        try {
-            await generatePdf();
-        } catch (error) {
-            console.error('Ошибка при генерации PDF:', error);
-            alert('Произошла ошибка при генерации PDF. Пожалуйста, попробуйте еще раз.');
-        }
-    });
-
-    // Обработчики для закрытия окна
-    document.getElementById('close-export-modal').addEventListener('click', () => modal.remove());
+    // Закрытие по клику вне модального окна
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
     });
 }
 
-// Функция для отображения задач для выбора при экспорте
-function renderTasksForExportSelection() {
-    const container = document.getElementById('selected-tasks-list');
-    if (!container) return;
+// Функция выполнения задачи
+async function completeTask(event) {
+    const taskElement = event.target.closest('.task');
+    const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
+    const isCompleted = taskElement.classList.contains('completed-task');
+    const taskArray = isCompleted ? tasks.completed : tasks.active;
 
-    container.innerHTML = '';
+    if (taskArray[taskIndex]) {
+        const task = taskArray[taskIndex];
+        const newStatus = !isCompleted;
 
-    // Добавляем активные задачи
-    tasks.active.forEach((task, index) => {
-        const taskElement = document.createElement('div');
-        taskElement.className = 'export-task-item';
-        taskElement.innerHTML = `
-            <input type="checkbox" id="task-${index}-active" class="export-task-checkbox" data-index="${index}" data-type="active">
-            <label for="task-${index}-active">${task.title || 'Без названия'} (Активная)</label>
-        `;
-        container.appendChild(taskElement);
-    });
+        try {
+            await db.updateTask(task.id, { is_completed: newStatus });
 
-    // Добавляем выполненные задачи
-    tasks.completed.forEach((task, index) => {
-        const taskElement = document.createElement('div');
-        taskElement.className = 'export-task-item';
-        taskElement.innerHTML = `
-            <input type="checkbox" id="task-${index}-completed" class="export-task-checkbox" data-index="${index}" data-type="completed">
-            <label for="task-${index}-completed">${task.title || 'Без названия'} (Выполненная)</label>
-        `;
-        container.appendChild(taskElement);
-    });
+            // Обновляем локальное состояние
+            if (newStatus) {
+                task.lastStatusChange = new Date().toISOString();
+                tasks.completed.push(task);
+                tasks.active = tasks.active.filter(t => t.id !== task.id);
+            } else {
+                task.lastStatusChange = new Date().toISOString();
+                tasks.active.push(task);
+                tasks.completed = tasks.completed.filter(t => t.id !== task.id);
+            }
 
-    // Если нет задач, показываем сообщение
-    if (tasks.active.length === 0 && tasks.completed.length === 0) {
-        container.innerHTML = '<div class="no-tasks-message">Нет задач для выбора</div>';
-    }
-}
-
-// Функция для получения задач в зависимости от выбранного типа экспорта
-function getTasksForExport() {
-    const exportType = document.getElementById('export-type').value;
-
-    switch (exportType) {
-        case EXPORT_TYPES.SELECTED:
-            return getSelectedTasks();
-        case EXPORT_TYPES.ALL_COMPLETED:
-            return { active: [], completed: [...tasks.completed] };
-        case EXPORT_TYPES.ALL_ACTIVE:
-            return { active: [...tasks.active], completed: [] };
-        case EXPORT_TYPES.ALL_TASKS:
-            return { active: [...tasks.active], completed: [...tasks.completed] };
-        case EXPORT_TYPES.BY_DATE_RANGE:
-            return getTasksByDateRange();
-        default:
-            return { active: [], completed: [] };
-    }
-}
-
-// Функция для получения выбранных задач
-function getSelectedTasks() {
-    const checkboxes = document.querySelectorAll('.export-task-checkbox:checked');
-    const selectedTasks = { active: [], completed: [] };
-
-    checkboxes.forEach(checkbox => {
-        const index = parseInt(checkbox.dataset.index);
-        const type = checkbox.dataset.type;
-
-        if (type === 'active' && tasks.active[index]) {
-            selectedTasks.active.push(tasks.active[index]);
-        } else if (type === 'completed' && tasks.completed[index]) {
-            selectedTasks.completed.push(tasks.completed[index]);
+            updateUI();
+        } catch (err) {
+            console.error('Ошибка при обновлении статуса задачи:', err);
+            alert('Не удалось обновить статус задачи');
         }
-    });
-
-    return selectedTasks;
-}
-
-// Функция для получения задач за определенный период
-function getTasksByDateRange() {
-    const startDateStr = document.getElementById('export-start-date').value;
-    const endDateStr = document.getElementById('export-end-date').value;
-
-    if (!startDateStr || !endDateStr) {
-        return { active: [], completed: [] };
     }
-
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-
-    const filteredTasks = { active: [], completed: [] };
-
-    // Фильтруем активные задачи
-    filteredTasks.active = tasks.active.filter(task => {
-        if (!task.dueDate) return false;
-        const taskDate = new Date(task.dueDate);
-        return taskDate >= startDate && taskDate <= endDate;
-    });
-
-    // Фильтруем выполненные задачи
-    filteredTasks.completed = tasks.completed.filter(task => {
-        if (!task.lastStatusChange) return false;
-        const taskDate = new Date(task.lastStatusChange);
-        return taskDate >= startDate && taskDate <= endDate;
-    });
-
-    return filteredTasks;
 }
 
 // Функция генерации PDF
-async function generatePdf() {
-    // Получаем задачи для экспорта
-    const exportTasks = getTasksForExport();
-
-    // Создаем документ
+async function generatePDF(exportTasks, chartType, productivityType) {
     const docDefinition = {
-        content: [],
+        content: [
+            {
+                text: 'Список задач',
+                style: 'header'
+            }
+        ],
         styles: {
             header: {
-                fontSize: 18,
+                fontSize: 22,
                 bold: true,
-                margin: [0, 0, 0, 10]
+                margin: [0, 0, 0, 20]
             },
             subheader: {
-                fontSize: 14,
+                fontSize: 16,
                 bold: true,
                 margin: [0, 10, 0, 5]
             },
             taskTitle: {
-                fontSize: 12,
+                fontSize: 14,
                 bold: true,
-                margin: [0, 5, 0, 2]
-            },
-            taskDescription: {
-                fontSize: 10,
-                margin: [10, 0, 0, 5],
-                color: '#555'
-            },
-            taskDate: {
-                fontSize: 10,
-                margin: [0, 0, 0, 5],
-                color: '#777'
+                margin: [0, 10, 0, 5]
             },
             categoryLabel: {
-                fontSize: 10,
-                margin: [0, 0, 0, 5],
-                color: '#444'
+                fontSize: 12,
+                margin: [0, 0, 0, 5]
+            },
+            taskDate: {
+                fontSize: 12,
+                margin: [0, 0, 0, 5]
+            },
+            taskDescription: {
+                fontSize: 12,
+                margin: [0, 0, 0, 10]
             }
-        },
-        defaultStyle: {
-            font: 'Roboto'
         }
     };
-
-    // Добавляем заголовок
-    docDefinition.content.push({
-        text: 'Список задач',
-        style: 'header'
-    });
-
-    // Добавляем дату генерации
-    docDefinition.content.push({
-        text: `Сгенерировано: ${new Date().toLocaleString('ru-RU')}`,
-        fontSize: 10,
-        color: '#999',
-        margin: [0, 0, 0, 20]
-    });
 
     // Добавляем активные задачи
     if (exportTasks.active.length > 0) {
@@ -1816,166 +1641,77 @@ async function generatePdf() {
         });
     }
 
-    // Добавляем статистику
-    docDefinition.content.push({
-        text: 'Статистика',
-        style: 'subheader',
-        pageBreak: 'before'
-    });
-
-    const totalTasks = exportTasks.active.length + exportTasks.completed.length;
-    docDefinition.content.push({
-        text: `Всего задач: ${totalTasks}`,
-        margin: [0, 0, 0, 5]
-    });
-
-    docDefinition.content.push({
-        text: `Активных: ${exportTasks.active.length}`,
-        margin: [0, 0, 0, 5]
-    });
-
-    docDefinition.content.push({
-        text: `Выполненных: ${exportTasks.completed.length}`,
-        margin: [0, 0, 0, 20]
-    });
-
-    // Добавляем диаграмму, если выбрано
-    const chartType = document.getElementById('export-chart-type').value;
-    if (chartType !== EXPORT_CHART_TYPES.NONE && totalTasks > 0) {
+    // Добавляем диаграмму, если выбрана
+    if (chartType !== EXPORT_CHART_TYPES.NONE) {
         await addChartToPdf(docDefinition, exportTasks, chartType);
     }
 
-    // Добавляем график продуктивности, если выбрано
-    const productivityType = document.getElementById('export-productivity-type').value;
+    // Добавляем график продуктивности, если выбран
     if (productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE) {
         await addProductivityChartToPdf(docDefinition, productivityType);
     }
 
     // Генерируем PDF
-    pdfMake.createPdf(docDefinition).download('tasks_export.pdf');
-
-    // Закрываем модальное окно
-    document.querySelector('.export-modal')?.remove();
+    pdfMake.createPdf(docDefinition).download('tasks.pdf');
 }
 
-// Функция для добавления задачи в PDF
-function addTaskToPdf(docDefinition, task, isCompleted) {
-    const category = categories[task.category] || categories[defaultCategoryId];
-
-    docDefinition.content.push({
-        text: task.title || 'Без названия',
-        style: 'taskTitle'
-    });
-
-    docDefinition.content.push({
-        text: `Категория: ${category.name}`,
-        style: 'categoryLabel',
-        color: category.color
-    });
-
-    if (task.dueDate) {
-        docDefinition.content.push({
-            text: `Срок: ${formatDate(task.dueDate)}`,
-            style: 'taskDate'
-        });
-    }
-
-    if (task.description) {
-        docDefinition.content.push({
-            text: task.description,
-            style: 'taskDescription'
-        });
-    }
-
-    docDefinition.content.push({
-        text: `Статус: ${isCompleted ? 'Выполнена' : 'Активна'}`,
-        style: 'taskDate',
-        margin: [0, 0, 0, 10]
-    });
-
-    docDefinition.content.push({
-        canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, lineColor: '#eee' }],
-        margin: [0, 5, 0, 5]
-    });
-}
-
-// Функция для добавления диаграммы в PDF
-async function addChartToPdf(docDefinition, exportTasks, chartType) {
-    // Создаем данные для диаграммы
-    let chartData;
-    let chartTitle;
-
-    if (chartType === EXPORT_CHART_TYPES.COMPLETION) {
-        chartTitle = 'Соотношение выполненных и активных задач';
-        chartData = {
-            labels: ['Выполненные', 'Активные'],
-            datasets: [
-                {
-                    data: [exportTasks.completed.length, exportTasks.active.length],
-                    backgroundColor: ['#4CAF50', '#FF9800']
+// Функция для получения изображения диаграммы
+function getChartImage(chartData) {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const tempChart = new Chart(ctx, {
+            type: 'pie',
+            data: chartData,
+            options: {
+                responsive: false,
+                animation: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
-            ]
-        };
-    } else if (chartType === EXPORT_CHART_TYPES.BY_CATEGORY) {
-        chartTitle = 'Распределение задач по категориям';
-
-        // Собираем данные по категориям
-        const categoryCounts = {};
-        const categoryColors = {};
-
-        // Обрабатываем активные задачи
-        exportTasks.active.forEach(task => {
-            const categoryId = task.category || defaultCategoryId;
-            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-            if (!categoryColors[categoryId]) {
-                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
             }
         });
 
-        // Обрабатываем выполненные задачи
-        exportTasks.completed.forEach(task => {
-            const categoryId = task.category || defaultCategoryId;
-            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-            if (!categoryColors[categoryId]) {
-                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
-            }
-        });
+        // Устанавливаем размеры canvas
+        canvas.width = 400;
+        canvas.height = 400;
 
-        // Формируем данные для диаграммы
-        const labels = [];
-        const data = [];
-        const backgroundColors = [];
+        // Перерисовываем диаграмму с новыми размерами
+        tempChart.resize();
 
-        Object.keys(categoryCounts).forEach(categoryId => {
-            const category = categories[categoryId] || categories[defaultCategoryId];
-            labels.push(category.name);
-            data.push(categoryCounts[categoryId]);
-            backgroundColors.push(categoryColors[categoryId]);
-        });
+        // Получаем изображение
+        const image = canvas.toDataURL('image/png');
+        tempChart.destroy();
 
-        chartData = {
-            labels: labels,
-            datasets: [
-                {
-                    data: data,
-                    backgroundColor: backgroundColors
-                }
-            ]
-        };
-    }
+        resolve(image);
+    });
+}
 
-    // Добавляем заголовок диаграммы
+// Функция для добавления графика продуктивности в PDF
+async function addProductivityChartToPdf(docDefinition, period) {
     docDefinition.content.push({
-        text: chartTitle,
+        text: 'График продуктивности',
         style: 'subheader',
         margin: [0, 20, 0, 10]
     });
 
     try {
-        // Получаем изображение диаграммы
+        const { labels, data } = getProductivityData();
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                label: 'Выполнено задач',
+                data: data,
+                backgroundColor: '#4CAF50',
+                borderColor: '#388E3C',
+                borderWidth: 1
+            }]
+        };
+
         const chartImage = await getChartImage(chartData);
 
-        // Добавляем саму диаграмму
         docDefinition.content.push({
             image: chartImage,
             width: 400,
@@ -1985,9 +1721,9 @@ async function addChartToPdf(docDefinition, exportTasks, chartType) {
 
         // Добавляем легенду
         const legendItems = [];
-        chartData.labels.forEach((label, index) => {
+        labels.forEach((label, index) => {
             legendItems.push({
-                text: `${label}: ${chartData.datasets[0].data[index]}`,
+                text: `${label}: ${data[index]} задач`,
                 margin: [0, 0, 0, 5]
             });
         });
@@ -1995,100 +1731,6 @@ async function addChartToPdf(docDefinition, exportTasks, chartType) {
         docDefinition.content.push({
             stack: legendItems,
             margin: [50, 0, 0, 20]
-        });
-    } catch (error) {
-        console.error('Ошибка при создании диаграммы:', error);
-        docDefinition.content.push({
-            text: 'Не удалось создать диаграмму',
-            color: 'red',
-            margin: [0, 0, 0, 20]
-        });
-    }
-}
-
-// Функция для добавления графика продуктивности в PDF
-async function addProductivityChartToPdf(docDefinition, productivityType) {
-    let startDate, endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
-
-    if (productivityType === EXPORT_PRODUCTIVITY_TYPES.CUSTOM) {
-        const startDateStr = document.getElementById('export-productivity-start-date').value;
-        const endDateStr = document.getElementById('export-productivity-end-date').value;
-
-        if (!startDateStr || !endDateStr) {
-            // Если даты не выбраны, используем последние 7 дней по умолчанию
-            startDate = new Date();
-            startDate.setDate(startDate.getDate() - 6);
-            startDate.setHours(0, 0, 0, 0);
-        } else {
-            startDate = new Date(startDateStr);
-            endDate = new Date(endDateStr);
-            startDate.setHours(0, 0, 0, 0);
-            endDate.setHours(23, 59, 59, 999);
-        }
-    } else {
-        const days = parseInt(productivityType);
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - days + 1);
-        startDate.setHours(0, 0, 0, 0);
-    }
-
-    // Создаем массив дат для отображения
-    const dateArray = [];
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Подготавливаем данные для графика
-    const labels = dateArray.map(date => formatDateForChart(date));
-    const data = dateArray.map(date => {
-        return tasks.completed.filter(task => {
-            if (!task.lastStatusChange) return false;
-            const taskDate = new Date(task.lastStatusChange);
-            return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-        }).length;
-    });
-
-    // Добавляем заголовок графика
-    docDefinition.content.push({
-        text: 'График продуктивности',
-        style: 'subheader',
-        margin: [0, 20, 0, 10]
-    });
-
-    // Добавляем описание периода
-    docDefinition.content.push({
-        text: `Период: с ${formatDate(startDate.toISOString())} по ${formatDate(endDate.toISOString())}`,
-        margin: [0, 0, 0, 10]
-    });
-
-    // Создаем данные для графика
-    const chartData = {
-        labels: labels,
-        datasets: [
-            {
-                label: 'Выполнено задач',
-                data: data,
-                backgroundColor: '#4CAF50',
-                borderColor: '#388E3C',
-                borderWidth: 1
-            }
-        ]
-    };
-
-    try {
-        // Получаем изображение графика
-        const chartImage = await getBarChartImage(chartData);
-
-        // Добавляем сам график
-        docDefinition.content.push({
-            image: chartImage,
-            width: 500,
-            alignment: 'center',
-            margin: [0, 0, 0, 20]
         });
     } catch (error) {
         console.error('Ошибка при создании графика продуктивности:', error);
@@ -2100,71 +1742,176 @@ async function addProductivityChartToPdf(docDefinition, productivityType) {
     }
 }
 
-// Функция для создания изображения круговой диаграммы
-function getChartImage(chartData) {
-    return new Promise((resolve) => {
-        // Создаем временный canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
+// Функция изменения даты задачи
+async function changeTaskDate(event) {
+    const taskElement = event.target.closest('.task');
+    const dateWrapper = taskElement.querySelector('.task-date-wrapper');
+    const currentDate = dateWrapper.querySelector('.task-due-date');
+    const changeDateButton = dateWrapper.querySelector('.task-change-date');
 
-        // Создаем диаграмму
-        new Chart(ctx, {
-            type: 'pie',
-            data: chartData,
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: {
-                        display: false
+    changeDateButton.classList.toggle('hidden');
+
+    if (!dateWrapper.querySelector('.task-date-input')) {
+        const currentDateText = currentDate.textContent;
+        currentDate.remove();
+
+        const dateInput = document.createElement('input');
+        dateInput.setAttribute('type', 'date');
+        dateInput.className = 'task-date-input';
+        if (currentDateText) {
+            dateInput.value = currentDateText;
+        }
+
+        dateWrapper.insertBefore(dateInput, changeDateButton);
+        dateInput.focus();
+
+        const saveDate = async () => {
+            const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
+            const newDate = dateInput.value;
+
+            try {
+                if (taskElement.classList.contains('completed-task')) {
+                    if (tasks.completed[taskIndex]) {
+                        const task = tasks.completed[taskIndex];
+                        await db.updateTask(task.id, { due_date: newDate });
+                        task.dueDate = newDate;
                     }
-                },
-                animation: {
-                    onComplete: () => {
-                        // После завершения анимации получаем данные изображения
-                        const image = canvas.toDataURL('image/png');
-                        resolve(image);
+                } else {
+                    if (tasks.active[taskIndex]) {
+                        const task = tasks.active[taskIndex];
+                        await db.updateTask(task.id, { due_date: newDate });
+                        task.dueDate = newDate;
                     }
                 }
+                updateUI();
+            } catch (err) {
+                console.error('Ошибка при обновлении даты задачи:', err);
+                alert('Не удалось обновить дату задачи');
+            }
+        };
+
+        dateInput.addEventListener('blur', saveDate);
+        dateInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveDate();
             }
         });
-    });
+    }
 }
 
-// Функция для создания изображения столбчатой диаграммы
-function getBarChartImage(chartData) {
-    return new Promise((resolve) => {
-        // Создаем временный canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 300;
-        const ctx = canvas.getContext('2d');
+// Функция инициализации редактора описания задачи
+function initEditorForTask(taskElement) {
+    const descriptionContent = taskElement.querySelector('.description-content');
+    const descriptionText = descriptionContent.querySelector('.task-description-text');
+    const editorContainer = descriptionContent.querySelector('.task-description-editor');
+    const editorButtons = taskElement.querySelector('.editor-buttons');
 
-        // Создаем диаграмму
-        new Chart(ctx, {
-            type: 'bar',
-            data: chartData,
-            options: {
-                responsive: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                animation: {
-                    onComplete: () => {
-                        // После завершения анимации получаем данные изображения
-                        const image = canvas.toDataURL('image/png');
-                        resolve(image);
-                    }
-                }
-            }
-        });
+    // Скрываем текст и показываем редактор
+    descriptionText.classList.add('hidden');
+    editorContainer.classList.remove('hidden');
+    editorButtons.classList.remove('hidden');
+
+    // Если редактор уже инициализирован для этой задачи, просто показываем его
+    if (activeEditors[editorContainer.id]) {
+        return;
+    }
+
+    // Создаем новый редактор
+    const editor = new Editor({
+        el: editorContainer,
+        height: '200px',
+        initialEditType: 'wysiwyg',
+        previewStyle: 'vertical',
+        initialValue: descriptionText.textContent === 'Нет описания' ? '' : descriptionText.textContent
     });
+
+    // Сохраняем редактор в объекте активных редакторов
+    activeEditors[editorContainer.id] = editor;
+}
+
+// Функция удаления задачи
+async function deleteTask(event) {
+    const taskElement = event.target.closest('.task');
+    const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
+    const isCompleted = taskElement.classList.contains('completed-task');
+    const taskArray = isCompleted ? tasks.completed : tasks.active;
+
+    if (taskArray[taskIndex]) {
+        const task = taskArray[taskIndex];
+
+        try {
+            await db.deleteTask(task.id);
+
+            // Удаляем задачу из локального массива
+            if (isCompleted) {
+                tasks.completed = tasks.completed.filter(t => t.id !== task.id);
+            } else {
+                tasks.active = tasks.active.filter(t => t.id !== task.id);
+            }
+
+            updateUI();
+        } catch (err) {
+            console.error('Ошибка при удалении задачи:', err);
+            alert('Не удалось удалить задачу');
+        }
+    }
+}
+
+// Функция сохранения описания задачи
+async function saveTaskDescription(event) {
+    const taskElement = event.target.closest('.task');
+    const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
+    const descriptionContent = taskElement.querySelector('.description-content');
+    const descriptionText = descriptionContent.querySelector('.task-description-text');
+    const editorContainer = descriptionContent.querySelector('.task-description-editor');
+    const editorButtons = taskElement.querySelector('.editor-buttons');
+    const editor = activeEditors[editorContainer.id];
+
+    if (editor) {
+        const newDescription = editor.getMarkdown();
+        const isCompleted = taskElement.classList.contains('completed-task');
+        const taskArray = isCompleted ? tasks.completed : tasks.active;
+
+        try {
+            if (taskArray[taskIndex]) {
+                const task = taskArray[taskIndex];
+                await db.updateTask(task.id, { description: newDescription });
+                task.description = newDescription;
+            }
+
+            // Обновляем отображение
+            descriptionText.textContent = newDescription || 'Нет описания';
+            descriptionText.classList.remove('hidden');
+            editorContainer.classList.add('hidden');
+            editorButtons.classList.add('hidden');
+
+            // Удаляем редактор
+            editor.destroy();
+            delete activeEditors[editorContainer.id];
+        } catch (err) {
+            console.error('Ошибка при обновлении описания задачи:', err);
+            alert('Не удалось обновить описание задачи');
+        }
+    }
+}
+
+// Функция отмены редактирования описания
+function cancelTaskDescriptionEditing(event) {
+    const taskElement = event.target.closest('.task');
+    const descriptionContent = taskElement.querySelector('.description-content');
+    const descriptionText = descriptionContent.querySelector('.task-description-text');
+    const editorContainer = descriptionContent.querySelector('.task-description-editor');
+    const editorButtons = taskElement.querySelector('.editor-buttons');
+    const editor = activeEditors[editorContainer.id];
+
+    if (editor) {
+        // Возвращаем отображение к исходному состоянию
+        descriptionText.classList.remove('hidden');
+        editorContainer.classList.add('hidden');
+        editorButtons.classList.add('hidden');
+
+        // Удаляем редактор
+        editor.destroy();
+        delete activeEditors[editorContainer.id];
+    }
 }

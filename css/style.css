@@ -1062,3 +1062,40 @@ body {
 .hidden {
   display: none;
 }
+
+.general-stats {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+}
+
+.stats-item {
+    text-align: center;
+    padding: 10px 20px;
+}
+
+.stats-label {
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.total-tasks,
+.completed-tasks,
+.active-tasks,
+.completion-percentage {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.completion-percentage {
+    color: #4CAF50;
+}

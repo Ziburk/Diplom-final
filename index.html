@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To-Do List</title>
+    <title>To Do List</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="./dist/bundle.js"></script>
-    <script src="javascript/auth.js"></script>
 
     <!-- Библиотеки -->
     <!-- Диграмма -->
@@ -26,6 +24,11 @@
 </head>
 
 <body>
+    <!-- Кнопка переключения пользователей -->
+    <button id="switch-user" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+        Переключить пользователя (ID: 1)
+    </button>
+
     <header class="header">
         <div class="header-wrapper">
             <a href="index.html" class="logo-link">
@@ -90,6 +93,26 @@
             <section class="stats-section">
                 <h2 class="stats-title">Статистика задач</h2>
 
+                <!-- Общая статистика -->
+                <div class="general-stats">
+                    <div class="stats-item">
+                        <span class="stats-label">Всего задач:</span>
+                        <span class="total-tasks">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Выполнено:</span>
+                        <span class="completed-tasks">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Активных:</span>
+                        <span class="active-tasks">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Процент выполнения:</span>
+                        <span class="completion-percentage">0%</span>
+                    </div>
+                </div>
+
                 <!-- Добавляем переключатель типов диаграмм -->
                 <div class="chart-type-selector">
                     <select id="chart-type">
@@ -138,6 +161,9 @@
 
     </footer>
 
+    <!-- Скрипты приложения -->
+    <script src="./dist/bundle.js"></script>
+    <script src="javascript/auth.js"></script>
 </body>
 
 </html>

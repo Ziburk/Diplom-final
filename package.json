@@ -1,11 +1,13 @@
 {
   "name": "vot-test-diplom",
   "version": "1.0.0",
-  "main": "readme.js",
+  "description": "",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
     "build": "webpack",
-    "start": "webpack --watch"
+    "dev": "concurrently \"npm run start\" \"webpack --watch\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -18,20 +20,30 @@
     "url": "https://github.com/Ziburk/Vot-test-diplom/issues"
   },
   "homepage": "https://github.com/Ziburk/Vot-test-diplom#readme",
-  "description": "",
   "dependencies": {
     "@toast-ui/editor": "^3.2.2",
     "@toast-ui/editor-plugin-code-syntax-highlight": "^3.1.0",
-    "chart.js": "^4.4.9",
+    "chart.js": "^4.3.0",
     "codemirror": "^6.0.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "ngrok": "^5.0.0-beta.2",
     "pdfmake": "^0.2.20",
+    "pg": "^8.11.0",
     "toast-ui-editor": "^1.0.0"
   },
   "devDependencies": {
-    "css-loader": "^7.1.2",
-    "style-loader": "^4.0.0",
-    "webpack": "^5.99.9",
-    "webpack-cli": "^6.0.1"
+    "buffer": "^6.0.3",
+    "concurrently": "^8.2.2",
+    "css-loader": "^6.8.1",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "sass": "^1.63.6",
+    "sass-loader": "^13.3.2",
+    "stream-browserify": "^3.0.0",
+    "style-loader": "^3.3.3",
+    "util": "^0.12.5",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4"
   }
 }
