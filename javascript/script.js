@@ -816,7 +816,6 @@ function addTask() {
 
 // Функция сохранения задач
 function saveTasks() {
-    console.log('save');
     localStorage.setItem('todoTasks', JSON.stringify(tasks));
     localStorage.setItem('todoCategories', JSON.stringify(categories));
 }
@@ -970,7 +969,7 @@ function getCategoryIdByName(name) {
 function initEditorForTask(taskElement) {
     if (!taskElement) return; // Защита от null
 
-    const index = taskElement.dataset.originalIndex; // Исправлено с dataset.index на dataset.originalIndex
+    const index = taskElement.dataset.originalIndex;
     const isCompleted = taskElement.classList.contains('completed-task');
     const task = isCompleted ? tasks.completed[index] : tasks.active[index];
 
@@ -998,9 +997,7 @@ function initEditorForTask(taskElement) {
     editorButtons.classList.remove('hidden');
 
     try {
-        // Инициализируем редактор с автоматической высотой
-        //const Editor = toastui.Editor;
-        const editor = new Editor({
+        const editor = new toastui.Editor({
             el: editorContainer,
             initialValue: task.description || '',
             previewStyle: 'tab',
