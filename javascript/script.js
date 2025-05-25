@@ -533,7 +533,16 @@ function createTaskElement(task, index, isCompleted) {
     taskElement.dataset.category = categoryId;
     const category = categories[categoryId] || categories[defaultCategoryId];
 
-    // Создаем HTML структуру задачи
+    // Создаем временный редактор для преобразования Markdown в HTML
+    const tempContainer = document.createElement('div');
+    const tempEditor = new toastui.Editor({
+        el: tempContainer,
+        initialValue: task.description || '',
+        hidden: true
+    });
+    const htmlDescription = task.description ? tempEditor.getHTML() : 'Нет описания';
+    tempEditor.destroy();
+
     taskElement.innerHTML = `
     <div class="task-wrapper">
         <div class="task-title-wrapper">
@@ -562,18 +571,17 @@ function createTaskElement(task, index, isCompleted) {
             </button>
         </div>
     </div>
-        <div class="task-description hidden">
-            <h4 class="task-description-title">Описание</h4>
-            <div class="description-content">
-                <div class="task-description-text">${task.description || 'Нет описания'}</div>
-                <div class="task-description-editor hidden" id="editor-${index}"></div>
-            </div>
-            <div class="editor-buttons hidden">
-                <button class="save-description-btn">Сохранить</button>
-                <button class="cancel-description-btn">Отмена</button>
-            </div>
+    <div class="task-description hidden">
+        <h4 class="task-description-title">Описание</h4>
+        <div class="description-content">
+            <div class="task-description-text">${htmlDescription}</div>
+            <div class="task-description-editor hidden" id="editor-${index}"></div>
         </div>
-    `;
+        <div class="editor-buttons hidden">
+            <button class="save-description-btn">Сохранить</button>
+            <button class="cancel-description-btn">Отмена</button>
+        </div>
+    </div>`;
 
     taskElement.setAttribute('style', `border-color: ${category.color}`);
     return taskElement;
@@ -1045,22 +1053,23 @@ function saveTaskDescription(event) {
     if (!editorContainer || !textDescription || !editorButtons) return;
 
     try {
-        const newDescription = editor.getMarkdown();
+        const markdownContent = editor.getMarkdown();
+        const htmlContent = editor.getHTML();
 
         if (isCompleted) {
             if (tasks.completed[index]) {
-                tasks.completed[index].description = newDescription;
+                tasks.completed[index].description = markdownContent;
             }
         } else {
             if (tasks.active[index]) {
-                tasks.active[index].description = newDescription;
+                tasks.active[index].description = markdownContent;
             }
         }
 
         saveTasks();
 
-        // Обновляем текстовое представление
-        textDescription.innerHTML = newDescription || 'Нет описания';
+        // Обновляем текстовое представление с HTML-контентом
+        textDescription.innerHTML = htmlContent || 'Нет описания';
         textDescription.classList.remove('hidden');
         editorContainer.classList.add('hidden');
         editorButtons.classList.add('hidden');
