@@ -1,0 +1,29 @@
+/* Стили для перетаскивания */
+.task.dragging {
+    opacity: 0.5;
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: #f5f5f5;
+}
+
+.task-placeholder {
+    background-color: #e0e0e0;
+    border: 2px dashed #9e9e9e;
+    border-radius: 4px;
+    height: 60px;
+    /* Примерная высота задачи */
+    margin: 5px 0;
+}
+
+.task-list {
+    min-height: 100px;
+    transition: background-color 0.2s;
+}
+
+.task-list.drag-over {
+    background-color: #f0f0f0;
+}
+
+// .task {
+//     transition: transform 0.2s ease;
+// }

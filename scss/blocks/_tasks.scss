@@ -1,0 +1,192 @@
+.new-task {
+    display: flex;
+    align-items: center;
+
+    &-ico {
+        width: 35px;
+        height: 35px;
+        margin: 0 10px 0 13px;
+    }
+
+    &-title {
+        width: 80%;
+        font-weight: 500;
+        font-size: 24px;
+        line-height: 1.5;
+        color: black;
+        border: none;
+        font-family: "Montserrat";
+
+    }
+
+    &>.task-title-wrapper {
+        width: 100%;
+    }
+}
+
+.add-task-button {
+    margin: 0 0 20px;
+    padding: 10px;
+    background-color: transparent;
+
+    &:hover,
+    &:focus {
+        cursor: pointer;
+        opacity: 0.7;
+    }
+
+}
+
+.task-list {
+    display: grid;
+    grid-row-gap: 15px;
+}
+
+.task {
+    box-sizing: border-box;
+    box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
+    border-radius: 24px 24px 24px 24px;
+    min-height: 89px;
+    background-color: #FFF;
+    border: 5px solid;
+    position: relative;
+
+    &-wrapper {
+        margin: 26px 0;
+        display: flex;
+        flex-grow: 1;
+        justify-content: space-between;
+    }
+
+    .task-title {
+        @include font(24px, 1.5, 500);
+        margin: 0 0 0 15px;
+
+        &-wrapper {
+            display: flex;
+            width: 100%;
+        }
+
+        &-input {
+            @include font(24px, 1.5, 500);
+            margin: 0 0 0 20px;
+            color: black;
+            border: none;
+            width: 100%;
+            font-family: "Montserrat";
+        }
+    }
+
+    .task-comp:checked+.check-label {
+        background-image: url(https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Light_green_check.svg/600px-Light_green_check.svg.png);
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center;
+    }
+
+    .check-label {
+        margin: 0 0 0 20px;
+        position: relative;
+        width: 20px;
+
+        &::before {
+            content: '';
+            position: absolute;
+            background-image: url('../img/task-ico.png');
+            background-size: cover;
+            background-position: 0;
+            width: 35px;
+            height: 35px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        &:hover,
+        &:focus {
+            cursor: pointer;
+        }
+    }
+
+    .task-category {
+        display: inline-block;
+        border-radius: 10px 0 0 0;
+        padding: 5px;
+        font-size: 17px;
+        color: white;
+        position: absolute;
+        top: 0;
+        left: 0px;
+    }
+
+    .task-change {
+        margin: 0 10px;
+        background-color: transparent;
+        border: none;
+
+        &:hover,
+        &:focus {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        &-logo {
+            width: 20px;
+            height: 20px;
+            fill: none;
+        }
+    }
+
+    .button-wrapper {
+        display: flex;
+        align-items: center;
+
+        .task-open-description {
+            border: none;
+            background-color: transparent;
+
+            &:hover,
+            &:focus {
+                cursor: pointer;
+                opacity: 0.7;
+            }
+        }
+
+        .task-delete {
+            border: none;
+            background-color: transparent;
+            margin: 0 15px;
+
+            &:hover,
+            &:focus {
+                background-color: red;
+                cursor: pointer;
+            }
+
+            &-ico {
+                width: 20px;
+                height: 20px;
+                fill: none;
+            }
+        }
+
+
+    }
+
+    .task-description {
+        margin: -11px 85px 15px 55px;
+        min-height: 20px;
+
+        &-ico {
+            width: 20px;
+            height: 20px;
+            fill: none;
+        }
+    }
+
+}
+
+.completed-tasks-title,
+.current-tasks-title {
+    margin: 20px 0;
+}

@@ -1,0 +1,8 @@
+.task {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.task-move {
+    transform: translateY(20px);
+    opacity: 0;
+}

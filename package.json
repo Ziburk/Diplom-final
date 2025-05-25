@@ -1,0 +1,36 @@
+{
+  "name": "vot-test-diplom",
+  "version": "1.0.0",
+  "main": "readme.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "start": "webpack --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ziburk/Vot-test-diplom.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ziburk/Vot-test-diplom/issues"
+  },
+  "homepage": "https://github.com/Ziburk/Vot-test-diplom#readme",
+  "description": "",
+  "dependencies": {
+    "@toast-ui/editor": "^3.2.2",
+    "@toast-ui/editor-plugin-code-syntax-highlight": "^3.1.0",
+    "chart.js": "^4.4.9",
+    "codemirror": "^6.0.1",
+    "pdfmake": "^0.2.20",
+    "toast-ui-editor": "^1.0.0"
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  }
+}

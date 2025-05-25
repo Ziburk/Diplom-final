@@ -1,0 +1,146 @@
+.filter-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+
+    .category-controls {
+        display: flex;
+        gap: 10px;
+
+        .category-filter,
+        .new-task-category {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .category-manager-btn {
+            background-color: transparent;
+            border: none;
+            border-radius: 4px;
+
+            &:hover,
+            &:focus {
+                cursor: pointer;
+                opacity: 0.7;
+            }
+        }
+
+        .category-manager-ico {
+            width: 30px;
+            height: 30px;
+        }
+
+    }
+
+    .status-filter {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+
+}
+
+.category-manager-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+
+    .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        width: 500px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+
+        #add-new-category-up {
+            background-color: lightgreen;
+            border: none;
+            color: gray;
+            font-size: large;
+            border-radius: 25%;
+            width: 30px;
+            height: 30px;
+
+            &:hover,
+            &:focus {
+                cursor: pointer;
+                opacity: 0.7;
+            }
+        }
+
+        .categories-list {
+            margin: 20px 0;
+
+            .category-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+                padding: 10px;
+                background-color: #f9f9f9;
+                border-radius: 4px;
+
+                .category-color-picker {
+                    width: 30px;
+                    height: 30px;
+                    padding: 0;
+                    border: none;
+                    cursor: pointer;
+                }
+
+                .category-name {
+                    flex-grow: 1;
+                    padding: 5px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                }
+
+                .delete-category {
+                    background-color: #ff5252;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 5px 10px;
+                    cursor: pointer;
+                }
+            }
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+
+            #add-new-category-down {
+
+                &:hover,
+                &:focus {
+                    cursor: pointer;
+                    opacity: 0.7;
+                }
+            }
+
+            #close-category-manager {
+
+                &:hover,
+                &:focus {
+                    cursor: pointer;
+                    opacity: 0.7;
+                }
+            }
+        }
+
+    }
+}

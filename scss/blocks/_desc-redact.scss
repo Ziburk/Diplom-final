@@ -1,0 +1,37 @@
+/* Стили для редактора */
+.task-description-editor {
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.editor-buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.editor-buttons button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.editor-buttons .save-description-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.editor-buttons .cancel-description-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.task-description-text {
+    white-space: pre-wrap;
+    margin-top: 10px;
+    padding: 10px;
+    background-color: transparent;
+    border-radius: 4px;
+}
