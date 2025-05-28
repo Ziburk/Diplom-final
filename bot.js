@@ -10,55 +10,69 @@ const bot = new Telegraf('8149852561:AAGnlLUr0ba-1C2WYnM1gKmba_0n-vqtNNM');
 // Подключаем middleware для работы с сессиями
 bot.use(session());
 
-// Глобальный объект для хранения задач
-let tasks = {
-    active: [],     // массив текущих задач
-    completed: []   // массив выполненных задач
+// Изменяем глобальный объект для хранения задач
+let users = {
+    // Структура будет такой:
+    // userId: {
+    //     tasks: {
+    //         active: [],
+    //         completed: []
+    //     },
+    //     categories: {...}
+    // }
 };
 
-// Объект со стандартными категориями задач
-let categories = {
-    'other': {
-        id: 'other',
-        name: 'Общее',
-        color: '#607D8B'
-    },
-    'work': {
-        id: 'work',
-        name: 'Работа',
-        color: '#FF5252'
-    },
-    'personal': {
-        id: 'personal',
-        name: 'Личное',
-        color: '#69F0AE'
-    },
-    'shopping': {
-        id: 'shopping',
-        name: 'Покупки',
-        color: '#448AFF'
+// Создадим функцию для инициализации данных нового пользователя
+function initializeUserData(userId) {
+    if (!users[userId]) {
+        users[userId] = {
+            tasks: {
+                active: [],
+                completed: []
+            },
+            categories: {
+                'other': {
+                    id: 'other',
+                    name: 'Общее',
+                    color: '#607D8B'
+                },
+                'work': {
+                    id: 'work',
+                    name: 'Работа',
+                    color: '#FF5252'
+                },
+                'personal': {
+                    id: 'personal',
+                    name: 'Личное',
+                    color: '#69F0AE'
+                },
+                'shopping': {
+                    id: 'shopping',
+                    name: 'Покупки',
+                    color: '#448AFF'
+                }
+            }
+        };
     }
-};
+    return users[userId];
+}
 
 // Загрузка данных при запуске бота
 function loadData() {
     try {
-        if (fs.existsSync('tasks.json')) {
-            tasks = JSON.parse(fs.readFileSync('tasks.json'));
-        }
-        if (fs.existsSync('categories.json')) {
-            categories = JSON.parse(fs.readFileSync('categories.json'));
+        if (fs.existsSync('users.json')) {
+            users = JSON.parse(fs.readFileSync('users.json'));
         }
     } catch (error) {
         console.error('Ошибка при загрузке данных:', error);
+        users = {};
     }
 }
 
 // Сохранение данных
 function saveData() {
     try {
-        fs.writeFileSync('tasks.json', JSON.stringify(tasks));
-        fs.writeFileSync('categories.json', JSON.stringify(categories));
+        fs.writeFileSync('users.json', JSON.stringify(users));
     } catch (error) {
         console.error('Ошибка при сохранении данных:', error);
     }
@@ -192,22 +206,30 @@ bot.hears('❓ Помощь', (ctx) => {
 
 // Функция добавления новой задачи
 function startAddingTask(ctx) {
+    const userId = ctx.from.id;
+    initializeUserData(userId);
+    
     ctx.reply('Введите название задачи:');
-    // Устанавливаем состояние "ожидание названия задачи"
-    ctx.session = { state: 'waiting_task_name' };
+    ctx.session = { 
+        state: 'waiting_task_name',
+        userId: userId
+    };
 }
 
 // Функция отображения списка задач
 function showTasksList(ctx) {
-    const activeTasksList = tasks.active.map((task, index) => {
-        const category = categories[task.category] || categories.other;
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    
+    const activeTasksList = userData.tasks.active.map((task, index) => {
+        const category = userData.categories[task.category] || userData.categories.other;
         return `${index + 1}. ${task.title}\n` +
             `📅 ${formatDate(task.dueDate)}\n` +
             `🏷 ${category.name}\n`;
     }).join('\n');
 
-    const completedTasksList = tasks.completed.map((task, index) => {
-        const category = categories[task.category] || categories.other;
+    const completedTasksList = userData.tasks.completed.map((task, index) => {
+        const category = userData.categories[task.category] || userData.categories.other;
         return `${index + 1}. ✅ ${task.title}\n` +
             `📅 ${formatDate(task.dueDate)}\n` +
             `🏷 ${category.name}\n`;
@@ -229,7 +251,10 @@ function showTasksList(ctx) {
 
 // Функция отображения категорий
 function showCategories(ctx) {
-    const categoriesList = Object.values(categories).map(cat =>
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    
+    const categoriesList = Object.values(userData.categories).map(cat =>
         `🏷 ${cat.name}`
     ).join('\n');
 
@@ -244,9 +269,12 @@ function showCategories(ctx) {
 
 // Функция отображения статистики
 function showStats(ctx) {
-    const totalTasks = tasks.active.length + tasks.completed.length;
-    const activeTasksCount = tasks.active.length;
-    const completedTasksCount = tasks.completed.length;
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    
+    const totalTasks = userData.tasks.active.length + userData.tasks.completed.length;
+    const activeTasksCount = userData.tasks.active.length;
+    const completedTasksCount = userData.tasks.completed.length;
 
     const completionRate = totalTasks > 0
         ? Math.round((completedTasksCount / totalTasks) * 100)
@@ -265,11 +293,16 @@ function showStats(ctx) {
 bot.on('text', async (ctx) => {
     if (!ctx.session) return;
 
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+
     switch (ctx.session.state) {
         case 'waiting_task_name':
-            // Сохраняем название задачи и спрашиваем категорию
-            ctx.session.newTask = { title: ctx.message.text };
-            const categoryButtons = Object.values(categories).map(cat => [
+            ctx.session.newTask = { 
+                title: ctx.message.text,
+                userId: userId
+            };
+            const categoryButtons = Object.values(userData.categories).map(cat => [
                 Markup.button.callback(cat.name, `select_category:${cat.id}`)
             ]);
             await ctx.reply('Выберите категорию:', Markup.inlineKeyboard(categoryButtons));
@@ -287,9 +320,9 @@ bot.on('text', async (ctx) => {
                 ctx.session.newTask.dueDate = date.toISOString();
 
                 // Добавляем задачу
-                tasks.active.unshift({
+                userData.tasks.active.unshift({
                     ...ctx.session.newTask,
-                    originalPosition: tasks.active.length
+                    originalPosition: userData.tasks.active.length
                 });
 
                 saveData();
@@ -302,11 +335,11 @@ bot.on('text', async (ctx) => {
 
         case 'waiting_complete_number':
             const completeIndex = parseInt(ctx.message.text) - 1;
-            if (completeIndex >= 0 && completeIndex < tasks.active.length) {
-                const task = tasks.active[completeIndex];
+            if (completeIndex >= 0 && completeIndex < userData.tasks.active.length) {
+                const task = userData.tasks.active[completeIndex];
                 task.lastStatusChange = new Date().toISOString();
-                tasks.completed.unshift(task);
-                tasks.active.splice(completeIndex, 1);
+                userData.tasks.completed.unshift(task);
+                userData.tasks.active.splice(completeIndex, 1);
                 saveData();
                 await ctx.reply('Задача отмечена как выполненная! ✅');
                 showTasksList(ctx); // Показываем обновленный список
@@ -325,9 +358,9 @@ bot.on('text', async (ctx) => {
                 const [_, day, month, year] = matchChange;
                 const taskIndex = parseInt(taskNum) - 1;
 
-                if (taskIndex >= 0 && taskIndex < tasks.active.length) {
+                if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
                     const date = new Date(year, month - 1, day);
-                    tasks.active[taskIndex].dueDate = date.toISOString();
+                    userData.tasks.active[taskIndex].dueDate = date.toISOString();
                     saveData();
                     await ctx.reply('Дата задачи успешно изменена! 📅');
                     showTasksList(ctx); // Показываем обновленный список
@@ -342,8 +375,8 @@ bot.on('text', async (ctx) => {
 
         case 'waiting_delete_number':
             const deleteIndex = parseInt(ctx.message.text) - 1;
-            if (deleteIndex >= 0 && deleteIndex < tasks.active.length) {
-                tasks.active.splice(deleteIndex, 1);
+            if (deleteIndex >= 0 && deleteIndex < userData.tasks.active.length) {
+                userData.tasks.active.splice(deleteIndex, 1);
                 saveData();
                 await ctx.reply('Задача удалена! 🗑');
                 showTasksList(ctx); // Показываем обновленный список
@@ -355,9 +388,9 @@ bot.on('text', async (ctx) => {
 
         case 'waiting_change_category_number':
             const changeCatIndex = parseInt(ctx.message.text) - 1;
-            if (changeCatIndex >= 0 && changeCatIndex < tasks.active.length) {
+            if (changeCatIndex >= 0 && changeCatIndex < userData.tasks.active.length) {
                 ctx.session.taskToChange = changeCatIndex;
-                const categoryButtons = Object.values(categories).map(cat => [
+                const categoryButtons = Object.values(userData.categories).map(cat => [
                     Markup.button.callback(cat.name, `change_task_category:${cat.id}`)
                 ]);
                 await ctx.reply('Выберите новую категорию:',
@@ -373,13 +406,13 @@ bot.on('text', async (ctx) => {
         case 'waiting_category_name':
             const categoryName = ctx.message.text.trim();
 
-            if (categoryName === categories.other.name) {
+            if (categoryName === userData.categories.other.name) {
                 await ctx.reply('Это название зарезервировано. Пожалуйста, выберите другое.');
                 return;
             }
 
             // Проверяем, нет ли уже категории с таким именем
-            const exists = Object.values(categories).some(cat => cat.name === categoryName);
+            const exists = Object.values(userData.categories).some(cat => cat.name === categoryName);
             if (exists) {
                 await ctx.reply('Категория с таким названием уже существует. Пожалуйста, выберите другое название.');
                 return;
@@ -396,7 +429,7 @@ bot.on('text', async (ctx) => {
             const newId = generateCategoryId();
 
             // Создаем новую категорию
-            categories[newId] = {
+            userData.categories[newId] = {
                 id: newId,
                 name: categoryName,
                 color: randomColor
@@ -412,7 +445,7 @@ bot.on('text', async (ctx) => {
 
         case 'waiting_change_date_number':
             const taskIndex = parseInt(ctx.message.text) - 1;
-            if (taskIndex >= 0 && taskIndex < tasks.active.length) {
+            if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
                 ctx.session.taskToChange = taskIndex;
                 await ctx.reply(
                     'Выберите новую дату:',
@@ -429,10 +462,11 @@ bot.on('text', async (ctx) => {
 
 // Обработчики inline кнопок
 bot.action(/select_category:(.+)/, async (ctx) => {
-    const categoryId = ctx.match[1];
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
     
     if (ctx.session?.state === 'waiting_category') {
-        ctx.session.newTask.category = categoryId;
+        ctx.session.newTask.category = ctx.match[1];
         await ctx.reply(
             'Выберите дату выполнения:',
             Markup.inlineKeyboard(createCalendarKeyboard())
@@ -473,7 +507,10 @@ bot.action('delete_task', async (ctx) => {
 
 // Обработчик кнопки "Показать задачи по категории"
 bot.action('show_by_category', async (ctx) => {
-    const categoryButtons = Object.values(categories).map(cat => [
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    
+    const categoryButtons = Object.values(userData.categories).map(cat => [
         Markup.button.callback(`Показать ${cat.name}`, `show_category:${cat.id}`)
     ]);
     await ctx.reply('Выберите категорию для просмотра задач:',
@@ -484,16 +521,19 @@ bot.action('show_by_category', async (ctx) => {
 
 // Обработчик выбора категории для просмотра
 bot.action(/show_category:(.+)/, async (ctx) => {
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    
     const categoryId = ctx.match[1];
-    const category = categories[categoryId];
+    const category = userData.categories[categoryId];
 
-    const activeTasks = tasks.active
+    const activeTasks = userData.tasks.active
         .filter(task => task.category === categoryId)
         .map((task, index) =>
             `${index + 1}. ${task.title}\n📅 ${formatDate(task.dueDate)}`
         ).join('\n');
 
-    const completedTasks = tasks.completed
+    const completedTasks = userData.tasks.completed
         .filter(task => task.category === categoryId)
         .map((task, index) =>
             `${index + 1}. ✅ ${task.title}\n📅 ${formatDate(task.dueDate)}`
@@ -515,11 +555,14 @@ bot.action(/change_task_category:(.+)/, async (ctx) => {
     if (ctx.session?.state === 'waiting_new_category' &&
         typeof ctx.session.taskToChange === 'number') {
 
+        const userId = ctx.from.id;
+        const userData = initializeUserData(userId);
+        
         const categoryId = ctx.match[1];
         const taskIndex = ctx.session.taskToChange;
 
-        if (taskIndex >= 0 && taskIndex < tasks.active.length) {
-            tasks.active[taskIndex].category = categoryId;
+        if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
+            userData.tasks.active[taskIndex].category = categoryId;
             saveData();
             await ctx.reply('Категория задачи успешно изменена! 🏷');
         } else {
@@ -575,16 +618,18 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
     }
     
     // Добавляем задачу
-    tasks.active.unshift({
+    const userId = ctx.from.id;
+    const userData = initializeUserData(userId);
+    userData.tasks.active.unshift({
         ...ctx.session.newTask,
-        originalPosition: tasks.active.length
+        originalPosition: userData.tasks.active.length
     });
     
     saveData();
     await ctx.editMessageText(
         'Задача успешно добавлена! 👍\n' +
         `Название: ${ctx.session.newTask.title}\n` +
-        `Категория: ${categories[ctx.session.newTask.category].name}\n` +
+        `Категория: ${userData.categories[ctx.session.newTask.category].name}\n` +
         `Дата: ${formatDate(ctx.session.newTask.dueDate)}`
     );
     
@@ -601,21 +646,23 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
         typeof ctx.session.taskToChange === 'number') {
         
         const match = ctx.match[1];
+        const userId = ctx.from.id;
+        const userData = initializeUserData(userId);
         const taskIndex = ctx.session.taskToChange;
         
-        if (taskIndex >= 0 && taskIndex < tasks.active.length) {
+        if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
             if (match === 'no_date') {
-                tasks.active[taskIndex].dueDate = null;
+                userData.tasks.active[taskIndex].dueDate = null;
             } else {
                 const [year, month, day] = match.split(':').map(Number);
                 const date = new Date(year, month, day);
-                tasks.active[taskIndex].dueDate = date.toISOString();
+                userData.tasks.active[taskIndex].dueDate = date.toISOString();
             }
             
             saveData();
             await ctx.editMessageText(
                 'Дата задачи успешно изменена! 📅\n' +
-                `Новая дата: ${formatDate(tasks.active[taskIndex].dueDate)}`
+                `Новая дата: ${formatDate(userData.tasks.active[taskIndex].dueDate)}`
             );
             showTasksList(ctx);
         }
@@ -642,6 +689,6 @@ bot.launch().then(() => {
     console.error('Ошибка при запуске бота:', err);
 });
 
-// Включаем graceful shutdown
+// Выключение бота
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM')); 
