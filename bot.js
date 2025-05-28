@@ -642,6 +642,6 @@ bot.launch().then(() => {
     console.error('Ошибка при запуске бота:', err);
 });
 
-// Включаем graceful shutdown
+// Выключение бота
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM')); 
