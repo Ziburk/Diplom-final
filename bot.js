@@ -10,17 +10,8 @@ const bot = new Telegraf('8149852561:AAGnlLUr0ba-1C2WYnM1gKmba_0n-vqtNNM');
 // Подключаем middleware для работы с сессиями
 bot.use(session());
 
-// Изменяем глобальный объект для хранения задач
-let users = {
-    // Структура будет такой:
-    // userId: {
-    //     tasks: {
-    //         active: [],
-    //         completed: []
-    //     },
-    //     categories: {...}
-    // }
-};
+// Глобальный объект для хранения задач
+let users = {};
 
 // Создадим функцию для инициализации данных нового пользователя
 function initializeUserData(userId) {
@@ -94,54 +85,54 @@ function createCalendarKeyboard(selectedDate = null) {
     const date = selectedDate ? new Date(selectedDate) : new Date();
     const month = date.getMonth();
     const year = date.getFullYear();
-    
+
     const keyboard = [];
-    
+
     // Добавляем заголовок с месяцем и годом
     const monthNames = [
         'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
     ];
-    
+
     keyboard.push([
-        Markup.button.callback('←', `calendar:${year}:${month-1}`),
+        Markup.button.callback('←', `calendar:${year}:${month - 1}`),
         Markup.button.callback(`${monthNames[month]} ${year}`, 'ignore'),
-        Markup.button.callback('→', `calendar:${year}:${month+1}`)
+        Markup.button.callback('→', `calendar:${year}:${month + 1}`)
     ]);
-    
+
     // Добавляем дни недели
     keyboard.push(['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day =>
         Markup.button.callback(day, 'ignore')
     ));
-    
+
     // Получаем первый день месяца
     const firstDay = new Date(year, month, 1);
     let firstDayIndex = firstDay.getDay() || 7; // Преобразуем воскресенье (0) в 7
     firstDayIndex--; // Корректируем для начала недели с понедельника
-    
+
     // Получаем количество дней в месяце
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
+
     let currentRow = [];
-    
+
     // Добавляем пустые ячейки в начале
     for (let i = 0; i < firstDayIndex; i++) {
         currentRow.push(Markup.button.callback(' ', 'ignore'));
     }
-    
+
     // Добавляем дни месяца
     for (let day = 1; day <= daysInMonth; day++) {
         currentRow.push(Markup.button.callback(
             day.toString().padStart(2, ' '),
             `select_date:${year}:${month}:${day}`
         ));
-        
+
         if (currentRow.length === 7) {
             keyboard.push(currentRow);
             currentRow = [];
         }
     }
-    
+
     // Добавляем оставшиеся пустые ячейки
     while (currentRow.length > 0 && currentRow.length < 7) {
         currentRow.push(Markup.button.callback(' ', 'ignore'));
@@ -149,10 +140,10 @@ function createCalendarKeyboard(selectedDate = null) {
             keyboard.push(currentRow);
         }
     }
-    
+
     // Добавляем кнопку "Без даты"
     keyboard.push([Markup.button.callback('Без даты', 'select_date:no_date')]);
-    
+
     return keyboard;
 }
 
@@ -208,9 +199,9 @@ bot.hears('❓ Помощь', (ctx) => {
 function startAddingTask(ctx) {
     const userId = ctx.from.id;
     initializeUserData(userId);
-    
+
     ctx.reply('Введите название задачи:');
-    ctx.session = { 
+    ctx.session = {
         state: 'waiting_task_name',
         userId: userId
     };
@@ -220,7 +211,7 @@ function startAddingTask(ctx) {
 function showTasksList(ctx) {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     const activeTasksList = userData.tasks.active.map((task, index) => {
         const category = userData.categories[task.category] || userData.categories.other;
         return `${index + 1}. ${task.title}\n` +
@@ -253,7 +244,7 @@ function showTasksList(ctx) {
 function showCategories(ctx) {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     const categoriesList = Object.values(userData.categories).map(cat =>
         `🏷 ${cat.name}`
     ).join('\n');
@@ -271,7 +262,7 @@ function showCategories(ctx) {
 function showStats(ctx) {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     const totalTasks = userData.tasks.active.length + userData.tasks.completed.length;
     const activeTasksCount = userData.tasks.active.length;
     const completedTasksCount = userData.tasks.completed.length;
@@ -298,7 +289,7 @@ bot.on('text', async (ctx) => {
 
     switch (ctx.session.state) {
         case 'waiting_task_name':
-            ctx.session.newTask = { 
+            ctx.session.newTask = {
                 title: ctx.message.text,
                 userId: userId
             };
@@ -464,7 +455,7 @@ bot.on('text', async (ctx) => {
 bot.action(/select_category:(.+)/, async (ctx) => {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     if (ctx.session?.state === 'waiting_category') {
         ctx.session.newTask.category = ctx.match[1];
         await ctx.reply(
@@ -473,7 +464,7 @@ bot.action(/select_category:(.+)/, async (ctx) => {
         );
         ctx.session.state = 'waiting_date';
     }
-    
+
     await ctx.answerCbQuery();
 });
 
@@ -509,7 +500,7 @@ bot.action('delete_task', async (ctx) => {
 bot.action('show_by_category', async (ctx) => {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     const categoryButtons = Object.values(userData.categories).map(cat => [
         Markup.button.callback(`Показать ${cat.name}`, `show_category:${cat.id}`)
     ]);
@@ -523,7 +514,7 @@ bot.action('show_by_category', async (ctx) => {
 bot.action(/show_category:(.+)/, async (ctx) => {
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
-    
+
     const categoryId = ctx.match[1];
     const category = userData.categories[categoryId];
 
@@ -557,7 +548,7 @@ bot.action(/change_task_category:(.+)/, async (ctx) => {
 
         const userId = ctx.from.id;
         const userData = initializeUserData(userId);
-        
+
         const categoryId = ctx.match[1];
         const taskIndex = ctx.session.taskToChange;
 
@@ -586,15 +577,15 @@ bot.action(/calendar:(\d+):(-?\d+)/, async (ctx) => {
     const [_, yearStr, monthStr] = ctx.match;
     const year = parseInt(yearStr);
     const month = parseInt(monthStr);
-    
+
     // Проверяем валидность даты
     const date = new Date(year, month);
-    if (date.getFullYear() < new Date().getFullYear() - 1 || 
+    if (date.getFullYear() < new Date().getFullYear() - 1 ||
         date.getFullYear() > new Date().getFullYear() + 5) {
         await ctx.answerCbQuery('Выберите дату в пределах 5 лет');
         return;
     }
-    
+
     await ctx.editMessageReplyMarkup({
         inline_keyboard: createCalendarKeyboard(date)
     });
@@ -607,7 +598,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
         await ctx.answerCbQuery();
         return;
     }
-    
+
     const match = ctx.match[1];
     if (match === 'no_date') {
         ctx.session.newTask.dueDate = null;
@@ -616,7 +607,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
         const date = new Date(year, month, day);
         ctx.session.newTask.dueDate = date.toISOString();
     }
-    
+
     // Добавляем задачу
     const userId = ctx.from.id;
     const userData = initializeUserData(userId);
@@ -624,7 +615,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
         ...ctx.session.newTask,
         originalPosition: userData.tasks.active.length
     });
-    
+
     saveData();
     await ctx.editMessageText(
         'Задача успешно добавлена! 👍\n' +
@@ -632,7 +623,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
         `Категория: ${userData.categories[ctx.session.newTask.category].name}\n` +
         `Дата: ${formatDate(ctx.session.newTask.dueDate)}`
     );
-    
+
     delete ctx.session;
     await ctx.answerCbQuery();
 });
@@ -642,14 +633,14 @@ bot.action('ignore', (ctx) => ctx.answerCbQuery());
 
 // Обработчик выбора новой даты для существующей задачи
 bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
-    if (ctx.session?.state === 'waiting_new_date' && 
+    if (ctx.session?.state === 'waiting_new_date' &&
         typeof ctx.session.taskToChange === 'number') {
-        
+
         const match = ctx.match[1];
         const userId = ctx.from.id;
         const userData = initializeUserData(userId);
         const taskIndex = ctx.session.taskToChange;
-        
+
         if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
             if (match === 'no_date') {
                 userData.tasks.active[taskIndex].dueDate = null;
@@ -658,7 +649,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
                 const date = new Date(year, month, day);
                 userData.tasks.active[taskIndex].dueDate = date.toISOString();
             }
-            
+
             saveData();
             await ctx.editMessageText(
                 'Дата задачи успешно изменена! 📅\n' +
@@ -667,7 +658,7 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
             showTasksList(ctx);
         }
     }
-    
+
     delete ctx.session;
     await ctx.answerCbQuery();
 });

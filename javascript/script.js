@@ -838,6 +838,9 @@ function changeTask(event) {
 
     const isInput = currentTask.querySelector('.task-title-input');
     if (!isInput) {
+        // Отключаем перетаскивание сразу при создании поля ввода
+        toggleTaskDraggable(currentTaskWr, false);
+
         const currentTitleText = currentTaskTitle.innerText;
         const currentCategoryId = currentTaskWr.dataset.category ||
             getCategoryIdByName(currentTaskCategory.textContent.trim()) ||
@@ -887,6 +890,9 @@ function changeTask(event) {
                 tasks.active[taskIndex].title = newTitle;
                 tasks.active[taskIndex].category = newCategory;
             }
+
+            // Включаем перетаскивание обратно после сохранения
+            toggleTaskDraggable(currentTaskWr, true);
 
             updateUI();
         };
@@ -973,23 +979,24 @@ function getCategoryIdByName(name) {
 
 // Функция инициализации редактора описания
 function initEditorForTask(taskElement) {
-    if (!taskElement) return; // Защита от null
+    if (!taskElement) return;
+
+    // Отключаем перетаскивание при редактировании описания
+    toggleTaskDraggable(taskElement, false);
 
     const index = taskElement.dataset.originalIndex;
     const isCompleted = taskElement.classList.contains('completed-task');
     const task = isCompleted ? tasks.completed[index] : tasks.active[index];
 
-    if (!task) return; // Защита от несуществующей задачи
+    if (!task) return;
 
     const editorId = `editor-${index}`;
     const editorContainer = taskElement.querySelector(`#${editorId}`);
     const textDescription = taskElement.querySelector('.task-description-text');
     const editorButtons = taskElement.querySelector('.editor-buttons');
 
-    // Проверяем существование всех необходимых элементов
     if (!editorContainer || !textDescription || !editorButtons) return;
 
-    // Если редактор уже инициализирован, просто показываем его
     if (activeEditors[editorId]) {
         editorContainer.classList.remove('hidden');
         editorButtons.classList.remove('hidden');
@@ -997,7 +1004,6 @@ function initEditorForTask(taskElement) {
         return;
     }
 
-    // Скрываем текстовое описание и показываем редактор
     textDescription.classList.add('hidden');
     editorContainer.classList.remove('hidden');
     editorButtons.classList.remove('hidden');
@@ -1019,14 +1025,14 @@ function initEditorForTask(taskElement) {
             ]
         });
 
-        // Сохраняем ссылку на редактор
         activeEditors[editorId] = editor;
     } catch (e) {
         console.error('Ошибка при инициализации редактора:', e);
-        // Восстанавливаем исходное состояние при ошибке
         textDescription.classList.remove('hidden');
         editorContainer.classList.add('hidden');
         editorButtons.classList.add('hidden');
+        // Включаем перетаскивание обратно при ошибке
+        toggleTaskDraggable(taskElement, true);
     }
 }
 
@@ -1066,13 +1072,14 @@ function saveTaskDescription(event) {
 
         saveTasks();
 
-        // Обновляем текстовое представление с HTML-контентом
         textDescription.innerHTML = htmlContent || 'Нет описания';
         textDescription.classList.remove('hidden');
         editorContainer.classList.add('hidden');
         editorButtons.classList.add('hidden');
 
-        // Уничтожаем редактор
+        // Включаем перетаскивание обратно после сохранения
+        toggleTaskDraggable(taskElement, true);
+
         destroyEditor(editorId);
     } catch (e) {
         console.error('Ошибка при сохранении описания:', e);
@@ -1094,12 +1101,13 @@ function cancelTaskDescriptionEditing(event) {
 
     if (!editorContainer || !textDescription || !editorButtons) return;
 
-    // Возвращаем текстовое представление
     textDescription.classList.remove('hidden');
     editorContainer.classList.add('hidden');
     editorButtons.classList.add('hidden');
 
-    // Уничтожаем редактор
+    // Включаем перетаскивание обратно при отмене
+    toggleTaskDraggable(taskElement, true);
+
     destroyEditor(editorId);
 }
 
@@ -1118,14 +1126,17 @@ function destroyEditor(editorId) {
 // Функция изменения даты у задачи
 function changeTaskDate(event) {
     const taskElement = event.target.closest('.task');
-    if (!taskElement) return; // Защита от null
+    if (!taskElement) return;
+
+    // Отключаем перетаскивание при редактировании даты
+    toggleTaskDraggable(taskElement, false);
 
     const dateWrapper = taskElement.querySelector('.task-date-wrapper');
-    if (!dateWrapper) return; // Защита от null
+    if (!dateWrapper) return;
 
     const currentDateSpan = dateWrapper.querySelector('.task-due-date');
     const changeDateBtn = dateWrapper.querySelector('.task-change-date');
-    if (!currentDateSpan || !changeDateBtn) return; // Защита от null
+    if (!currentDateSpan || !changeDateBtn) return;
 
     const originalDate = currentDateSpan.textContent;
 
@@ -1158,10 +1169,12 @@ function changeTaskDate(event) {
             }
         }
 
+        // Включаем перетаскивание обратно после сохранения
+        toggleTaskDraggable(taskElement, true);
+
         saveTasks();
         renderTasks();
 
-        // Удаляем обработчик после сохранения
         document.removeEventListener('click', handleOutsideClick);
     };
 
@@ -1173,7 +1186,9 @@ function changeTaskDate(event) {
         dateInput.replaceWith(newSpan);
         changeDateBtn.classList.remove('hidden');
 
-        // Удаляем обработчик после отмены
+        // Включаем перетаскивание обратно при отмене
+        toggleTaskDraggable(taskElement, true);
+
         document.removeEventListener('click', handleOutsideClick);
     };
 
@@ -2173,4 +2188,11 @@ function getBarChartImage(chartData) {
             }
         });
     });
+}
+
+// Функция для управления возможностью перетаскивания задачи
+function toggleTaskDraggable(taskElement, isDraggable) {
+    if (taskElement) {
+        taskElement.draggable = isDraggable;
+    }
 }
