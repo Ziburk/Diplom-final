@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const routes = require('./routes');
@@ -9,8 +10,15 @@ const pool = require('./config/db');
 
 const app = express();
 
+// Настройка CORS
+app.use(cors({
+    origin: ['http://localhost:5500', 'http://127.0.0.1:5500'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // Middleware
-app.use(cors()); // Разрешаем CORS
 app.use(morgan('dev')); // Логирование запросов
 app.use(express.json()); // Парсинг JSON
 app.use(express.urlencoded({ extended: true })); // Парсинг URL-encoded bodies
@@ -28,6 +36,39 @@ pool.query('SELECT NOW()', (err, res) => {
     } else {
         console.log('Connected to the database:', res.rows[0]);
     }
+});
+
+// Временное решение для тестирования без Telegram авторизации
+app.use((req, res, next) => {
+    if (req.path === '/api/auth/test-token') {
+        return next();
+    }
+    
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Требуется аутентификация' });
+    }
+
+    try {
+        const token = authHeader.replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: 'Недействительный токен' });
+    }
+});
+
+// Маршрут для получения тестового токена
+app.post('/api/auth/test-token', (req, res) => {
+    const testUser = {
+        user_id: 1,
+        telegram_id: '12345',
+        username: 'test_user'
+    };
+
+    const token = jwt.sign(testUser, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+    res.json({ token, user: testUser });
 });
 
 // Базовый маршрут для фронтенда
