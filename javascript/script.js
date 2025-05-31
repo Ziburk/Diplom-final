@@ -630,18 +630,26 @@ function renderCategoriesList(container) {
         container.appendChild(categoryElement);
 
         // Обработчик события для изменения имени категории
-        categoryElement.querySelector('.category-name').addEventListener('change', (e) => {
-            categories[category.id].name = e.target.value;
-            saveCategories();
-            updateCategorySelectors();
-            renderTasks();
+        categoryElement.querySelector('.category-name').addEventListener('change', async (e) => {
+            try {
+                await todoAPI.updateCategory(category.id, { name: e.target.value });
+                categories[category.id].name = e.target.value;
+                updateCategorySelectors();
+                renderTasks();
+            } catch (error) {
+                console.error('Ошибка при обновлении имени категории:', error);
+            }
         });
 
         // Обработчик события для изменения цвета категории
-        categoryElement.querySelector('.category-color-picker').addEventListener('input', (e) => {
-            categories[category.id].color = e.target.value;
-            saveCategories();
-            renderTasks();
+        categoryElement.querySelector('.category-color-picker').addEventListener('input', async (e) => {
+            try {
+                await todoAPI.updateCategory(category.id, { color: e.target.value });
+                categories[category.id].color = e.target.value;
+                renderTasks();
+            } catch (error) {
+                console.error('Ошибка при обновлении цвета категории:', error);
+            }
         });
 
         // Обработчик события для удаления категории
@@ -911,14 +919,14 @@ function sortTasksByDate(tasksArray) {
     }
 
     // Разделяем задачи на те, у которых есть дата и нет
-    const tasksWithDate = tasksArray.filter(task => task.dueDate);
-    const tasksWithoutDate = tasksArray.filter(task => !task.dueDate);
+    const tasksWithDate = tasksArray.filter(task => task.due_date);
+    const tasksWithoutDate = tasksArray.filter(task => !task.due_date);
 
     // Сортируем только задачи с датой
     const sortedTasks = [...tasksWithDate].sort((a, b) => {
-        const aDate = new Date(a.dueDate);
+        const aDate = new Date(a.due_date);
         aDate.setHours(0, 0, 0, 0);
-        const bDate = new Date(b.dueDate);
+        const bDate = new Date(b.due_date);
         bDate.setHours(0, 0, 0, 0);
 
         // Для сортировки по близости к текущей дате
@@ -1006,14 +1014,13 @@ function initEditorForTask(taskElement) {
 }
 
 // Функция сохранения описания
-function saveTaskDescription(event) {
+async function saveTaskDescription(event) {
     const taskElement = event.target.closest('.task');
     if (!taskElement) return;
 
     const index = parseInt(taskElement.dataset.originalIndex);
     if (isNaN(index)) return;
 
-    const isCompleted = taskElement.classList.contains('completed-task');
     const editorId = `editor-${index}`;
     const editor = activeEditors[editorId];
 
@@ -1028,18 +1035,12 @@ function saveTaskDescription(event) {
     try {
         const markdownContent = editor.getMarkdown();
         const htmlContent = editor.getHTML();
+        const taskId = taskElement.dataset.taskId;
 
-        if (isCompleted) {
-            if (tasks.completed[index]) {
-                tasks.completed[index].description = markdownContent;
-            }
-        } else {
-            if (tasks.active[index]) {
-                tasks.active[index].description = markdownContent;
-            }
-        }
-
-        saveTasks();
+        // Сохраняем описание в БД
+        await todoAPI.updateTask(taskId, {
+            description: markdownContent
+        });
 
         textDescription.innerHTML = htmlContent || 'Нет описания';
         textDescription.classList.remove('hidden');
@@ -1050,8 +1051,11 @@ function saveTaskDescription(event) {
         toggleTaskDraggable(taskElement, true);
 
         destroyEditor(editorId);
-    } catch (e) {
-        console.error('Ошибка при сохранении описания:', e);
+        
+        // Перезагружаем задачи для обновления данных
+        await loadTasks();
+    } catch (error) {
+        console.error('Ошибка при сохранении описания:', error);
     }
 }
 

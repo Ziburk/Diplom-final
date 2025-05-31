@@ -58761,16 +58761,16 @@ function loadCategories() {
   return _loadCategories.apply(this, arguments);
 } // Функция загрузки задач с сервера
 function _loadCategories() {
-  _loadCategories = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-    var serverCategories, defaultCategories, _t3;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
+  _loadCategories = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+    var serverCategories, defaultCategories, _t5;
+    return _regenerator().w(function (_context6) {
+      while (1) switch (_context6.n) {
         case 0:
-          _context4.p = 0;
-          _context4.n = 1;
+          _context6.p = 0;
+          _context6.n = 1;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].getCategories();
         case 1:
-          serverCategories = _context4.v;
+          serverCategories = _context6.v;
           // Преобразуем массив категорий в объект для совместимости
           categories = serverCategories.reduce(function (acc, cat) {
             acc[cat.category_id] = {
@@ -58784,13 +58784,13 @@ function _loadCategories() {
 
           // Если категорий нет, создаем стандартные
           if (!(Object.keys(categories).length === 0)) {
-            _context4.n = 3;
+            _context6.n = 3;
             break;
           }
-          _context4.n = 2;
+          _context6.n = 2;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].createDefaultCategories();
         case 2:
-          defaultCategories = _context4.v;
+          defaultCategories = _context6.v;
           categories = defaultCategories.reduce(function (acc, cat) {
             acc[cat.category_id] = {
               id: cat.category_id,
@@ -58802,17 +58802,17 @@ function _loadCategories() {
           }, {});
         case 3:
           updateCategorySelectors();
-          _context4.n = 5;
+          _context6.n = 5;
           break;
         case 4:
-          _context4.p = 4;
-          _t3 = _context4.v;
-          console.error('Ошибка при загрузке категорий:', _t3);
-          throw _t3;
+          _context6.p = 4;
+          _t5 = _context6.v;
+          console.error('Ошибка при загрузке категорий:', _t5);
+          throw _t5;
         case 5:
-          return _context4.a(2);
+          return _context6.a(2);
       }
-    }, _callee4, null, [[0, 4]]);
+    }, _callee6, null, [[0, 4]]);
   }));
   return _loadCategories.apply(this, arguments);
 }
@@ -58820,33 +58820,33 @@ function loadTasks() {
   return _loadTasks.apply(this, arguments);
 } // Функция инициализации вкладок
 function _loadTasks() {
-  _loadTasks = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
-    var serverTasks, _t4;
-    return _regenerator().w(function (_context5) {
-      while (1) switch (_context5.n) {
+  _loadTasks = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+    var serverTasks, _t6;
+    return _regenerator().w(function (_context7) {
+      while (1) switch (_context7.n) {
         case 0:
-          _context5.p = 0;
-          _context5.n = 1;
+          _context7.p = 0;
+          _context7.n = 1;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].getTasks();
         case 1:
-          serverTasks = _context5.v;
+          serverTasks = _context7.v;
           // Разделяем задачи на активные и выполненные
           tasks = {
             active: serverTasks.active || [],
             completed: serverTasks.completed || []
           };
           updateUI();
-          _context5.n = 3;
+          _context7.n = 3;
           break;
         case 2:
-          _context5.p = 2;
-          _t4 = _context5.v;
-          console.error('Ошибка при загрузке задач:', _t4);
-          throw _t4;
+          _context7.p = 2;
+          _t6 = _context7.v;
+          console.error('Ошибка при загрузке задач:', _t6);
+          throw _t6;
         case 3:
-          return _context5.a(2);
+          return _context7.a(2);
       }
-    }, _callee5, null, [[0, 2]]);
+    }, _callee7, null, [[0, 2]]);
   }));
   return _loadTasks.apply(this, arguments);
 }
@@ -59159,19 +59159,67 @@ function renderCategoriesList(container) {
     container.appendChild(categoryElement);
 
     // Обработчик события для изменения имени категории
-    categoryElement.querySelector('.category-name').addEventListener('change', function (e) {
-      categories[category.id].name = e.target.value;
-      saveCategories();
-      updateCategorySelectors();
-      renderTasks();
-    });
+    categoryElement.querySelector('.category-name').addEventListener('change', /*#__PURE__*/function () {
+      var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(e) {
+        var _t2;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              _context3.p = 0;
+              _context3.n = 1;
+              return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateCategory(category.id, {
+                name: e.target.value
+              });
+            case 1:
+              categories[category.id].name = e.target.value;
+              updateCategorySelectors();
+              renderTasks();
+              _context3.n = 3;
+              break;
+            case 2:
+              _context3.p = 2;
+              _t2 = _context3.v;
+              console.error('Ошибка при обновлении имени категории:', _t2);
+            case 3:
+              return _context3.a(2);
+          }
+        }, _callee3, null, [[0, 2]]);
+      }));
+      return function (_x2) {
+        return _ref3.apply(this, arguments);
+      };
+    }());
 
     // Обработчик события для изменения цвета категории
-    categoryElement.querySelector('.category-color-picker').addEventListener('input', function (e) {
-      categories[category.id].color = e.target.value;
-      saveCategories();
-      renderTasks();
-    });
+    categoryElement.querySelector('.category-color-picker').addEventListener('input', /*#__PURE__*/function () {
+      var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(e) {
+        var _t3;
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.n) {
+            case 0:
+              _context4.p = 0;
+              _context4.n = 1;
+              return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateCategory(category.id, {
+                color: e.target.value
+              });
+            case 1:
+              categories[category.id].color = e.target.value;
+              renderTasks();
+              _context4.n = 3;
+              break;
+            case 2:
+              _context4.p = 2;
+              _t3 = _context4.v;
+              console.error('Ошибка при обновлении цвета категории:', _t3);
+            case 3:
+              return _context4.a(2);
+          }
+        }, _callee4, null, [[0, 2]]);
+      }));
+      return function (_x3) {
+        return _ref4.apply(this, arguments);
+      };
+    }());
 
     // Обработчик события для удаления категории
     categoryElement.querySelector('.delete-category').addEventListener('click', function () {
@@ -59210,21 +59258,21 @@ function addNewCategory() {
   return _addNewCategory.apply(this, arguments);
 } // Функция для создания уникального ID у категории
 function _addNewCategory() {
-  _addNewCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
-    var newId, categoryNumber, colorPalette, randomColor, defaultName, newCategory, manager, _t5;
-    return _regenerator().w(function (_context6) {
-      while (1) switch (_context6.n) {
+  _addNewCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+    var newId, categoryNumber, colorPalette, randomColor, defaultName, newCategory, manager, _t7;
+    return _regenerator().w(function (_context8) {
+      while (1) switch (_context8.n) {
         case 0:
           newId = generateId();
           categoryNumber = Object.keys(categories).length;
           colorPalette = ['#FF5252', '#FFD740', '#69F0AE', '#448AFF', '#B388FF', '#FF80AB', '#7C4DFF', '#64FFDA', '#FF8A80', '#EA80FC', '#8C9EFF', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D'];
           randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
           defaultName = "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u044F-".concat(categoryNumber);
-          _context6.p = 1;
-          _context6.n = 2;
+          _context8.p = 1;
+          _context8.n = 2;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].createCategory(defaultName, randomColor);
         case 2:
-          newCategory = _context6.v;
+          newCategory = _context8.v;
           categories[newCategory.category_id] = {
             id: newCategory.category_id,
             name: newCategory.name,
@@ -59235,16 +59283,16 @@ function _addNewCategory() {
             renderCategoriesList(manager.querySelector('.categories-list'));
           }
           updateCategorySelectors();
-          _context6.n = 4;
+          _context8.n = 4;
           break;
         case 3:
-          _context6.p = 3;
-          _t5 = _context6.v;
-          console.error('Ошибка при создании категории:', _t5);
+          _context8.p = 3;
+          _t7 = _context8.v;
+          console.error('Ошибка при создании категории:', _t7);
         case 4:
-          return _context6.a(2);
+          return _context8.a(2);
       }
-    }, _callee6, null, [[1, 3]]);
+    }, _callee8, null, [[1, 3]]);
   }));
   return _addNewCategory.apply(this, arguments);
 }
@@ -59255,33 +59303,33 @@ function generateId() {
 }
 
 // Функция удаления категории
-function deleteCategory(_x2) {
+function deleteCategory(_x4) {
   return _deleteCategory.apply(this, arguments);
 } // Функция добавления новой задачи
 function _deleteCategory() {
-  _deleteCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(categoryId) {
-    var _t6;
-    return _regenerator().w(function (_context7) {
-      while (1) switch (_context7.n) {
+  _deleteCategory = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9(categoryId) {
+    var _t8;
+    return _regenerator().w(function (_context9) {
+      while (1) switch (_context9.n) {
         case 0:
-          _context7.p = 0;
-          _context7.n = 1;
+          _context9.p = 0;
+          _context9.n = 1;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].deleteCategory(categoryId);
         case 1:
           delete categories[categoryId];
 
           // Обновляем UI
           updateUI();
-          _context7.n = 3;
+          _context9.n = 3;
           break;
         case 2:
-          _context7.p = 2;
-          _t6 = _context7.v;
-          console.error('Ошибка при удалении категории:', _t6);
+          _context9.p = 2;
+          _t8 = _context9.v;
+          console.error('Ошибка при удалении категории:', _t8);
         case 3:
-          return _context7.a(2);
+          return _context9.a(2);
       }
-    }, _callee7, null, [[0, 2]]);
+    }, _callee9, null, [[0, 2]]);
   }));
   return _deleteCategory.apply(this, arguments);
 }
@@ -59289,10 +59337,10 @@ function addTask() {
   return _addTask.apply(this, arguments);
 } // Функция сохранения задач
 function _addTask() {
-  _addTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+  _addTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1() {
     var newTask, categoryOptions, taskList, newTitle;
-    return _regenerator().w(function (_context9) {
-      while (1) switch (_context9.n) {
+    return _regenerator().w(function (_context1) {
+      while (1) switch (_context1.n) {
         case 0:
           newTask = document.createElement('li');
           newTask.className = "task new-task";
@@ -59310,58 +59358,58 @@ function _addTask() {
             }
           });
           newTitle.addEventListener('blur', /*#__PURE__*/function () {
-            var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(e) {
-              var selectCat, dueDateInput, taskData, _t7;
-              return _regenerator().w(function (_context8) {
-                while (1) switch (_context8.n) {
+            var _ref6 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(e) {
+              var selectCat, dueDateInput, taskData, _t9;
+              return _regenerator().w(function (_context0) {
+                while (1) switch (_context0.n) {
                   case 0:
                     selectCat = newTask.querySelector('.new-task-category');
                     dueDateInput = newTask.querySelector('.new-task-due-date');
                     if (!(e.relatedTarget === selectCat || e.relatedTarget === dueDateInput)) {
-                      _context8.n = 1;
+                      _context0.n = 1;
                       break;
                     }
                     newTitle.focus();
-                    return _context8.a(2);
+                    return _context0.a(2);
                   case 1:
                     if (!newTitle.value) {
-                      _context8.n = 6;
+                      _context0.n = 6;
                       break;
                     }
-                    _context8.p = 2;
+                    _context0.p = 2;
                     taskData = {
                       title: newTitle.value,
                       description: '',
                       category_id: selectCat.value,
                       due_date: dueDateInput.value || null
                     };
-                    _context8.n = 3;
+                    _context0.n = 3;
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].createTask(taskData);
                   case 3:
-                    _context8.n = 4;
+                    _context0.n = 4;
                     return loadTasks();
                   case 4:
-                    _context8.n = 6;
+                    _context0.n = 6;
                     break;
                   case 5:
-                    _context8.p = 5;
-                    _t7 = _context8.v;
-                    console.error('Ошибка при создании задачи:', _t7);
+                    _context0.p = 5;
+                    _t9 = _context0.v;
+                    console.error('Ошибка при создании задачи:', _t9);
                   case 6:
                     newTask.remove();
                   case 7:
-                    return _context8.a(2);
+                    return _context0.a(2);
                 }
-              }, _callee8, null, [[2, 5]]);
+              }, _callee0, null, [[2, 5]]);
             }));
-            return function (_x10) {
-              return _ref4.apply(this, arguments);
+            return function (_x13) {
+              return _ref6.apply(this, arguments);
             };
           }());
         case 1:
-          return _context9.a(2);
+          return _context1.a(2);
       }
-    }, _callee9);
+    }, _callee1);
   }));
   return _addTask.apply(this, arguments);
 }
@@ -59371,14 +59419,14 @@ function saveTasks() {
 }
 
 // Функция редактирования задачи
-function changeTask(_x3) {
+function changeTask(_x5) {
   return _changeTask.apply(this, arguments);
 } // Функция сортировки задач по дату
 function _changeTask() {
-  _changeTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(event) {
+  _changeTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(event) {
     var currentTaskWr, currentTask, currentTaskTitle, currentTaskCategory, redactButton, isInput, currentTitleText, currentCategoryId, categorySelect, taskTitleInput, isSaved, newCategory, newTitle, saveChanges, handleBlur, handleKeyDown;
-    return _regenerator().w(function (_context1) {
-      while (1) switch (_context1.n) {
+    return _regenerator().w(function (_context11) {
+      while (1) switch (_context11.n) {
         case 0:
           currentTaskWr = event.target.closest('.task');
           currentTask = currentTaskWr.querySelector('.task-title-wrapper');
@@ -59415,46 +59463,46 @@ function _changeTask() {
             newCategory = currentCategoryId;
             newTitle = currentTitleText;
             saveChanges = /*#__PURE__*/function () {
-              var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
-                var taskElement, taskId, isCompleted, _t8;
-                return _regenerator().w(function (_context0) {
-                  while (1) switch (_context0.n) {
+              var _ref7 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
+                var taskElement, taskId, isCompleted, _t0;
+                return _regenerator().w(function (_context10) {
+                  while (1) switch (_context10.n) {
                     case 0:
                       if (!isSaved) {
-                        _context0.n = 1;
+                        _context10.n = 1;
                         break;
                       }
-                      return _context0.a(2);
+                      return _context10.a(2);
                     case 1:
                       isSaved = true;
-                      _context0.p = 2;
+                      _context10.p = 2;
                       taskElement = event.target.closest('.task');
                       taskId = taskElement.dataset.taskId;
                       isCompleted = taskElement.classList.contains('completed-task');
-                      _context0.n = 3;
+                      _context10.n = 3;
                       return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateTask(taskId, {
                         title: newTitle,
                         category_id: newCategory
                       });
                     case 3:
-                      _context0.n = 4;
+                      _context10.n = 4;
                       return loadTasks();
                     case 4:
                       // Перезагружаем задачи
                       toggleTaskDraggable(currentTaskWr, true);
-                      _context0.n = 6;
+                      _context10.n = 6;
                       break;
                     case 5:
-                      _context0.p = 5;
-                      _t8 = _context0.v;
-                      console.error('Ошибка при обновлении задачи:', _t8);
+                      _context10.p = 5;
+                      _t0 = _context10.v;
+                      console.error('Ошибка при обновлении задачи:', _t0);
                     case 6:
-                      return _context0.a(2);
+                      return _context10.a(2);
                   }
-                }, _callee0, null, [[2, 5]]);
+                }, _callee10, null, [[2, 5]]);
               }));
               return function saveChanges() {
-                return _ref5.apply(this, arguments);
+                return _ref7.apply(this, arguments);
               };
             }();
             taskTitleInput.addEventListener('input', function (e) {
@@ -59487,9 +59535,9 @@ function _changeTask() {
             });
           }
         case 1:
-          return _context1.a(2);
+          return _context11.a(2);
       }
-    }, _callee1);
+    }, _callee11);
   }));
   return _changeTask.apply(this, arguments);
 }
@@ -59504,17 +59552,17 @@ function sortTasksByDate(tasksArray) {
 
   // Разделяем задачи на те, у которых есть дата и нет
   var tasksWithDate = tasksArray.filter(function (task) {
-    return task.dueDate;
+    return task.due_date;
   });
   var tasksWithoutDate = tasksArray.filter(function (task) {
-    return !task.dueDate;
+    return !task.due_date;
   });
 
   // Сортируем только задачи с датой
   var sortedTasks = _toConsumableArray(tasksWithDate).sort(function (a, b) {
-    var aDate = new Date(a.dueDate);
+    var aDate = new Date(a.due_date);
     aDate.setHours(0, 0, 0, 0);
-    var bDate = new Date(b.dueDate);
+    var bDate = new Date(b.due_date);
     bDate.setHours(0, 0, 0, 0);
 
     // Для сортировки по близости к текущей дате
@@ -59591,46 +59639,81 @@ function initEditorForTask(taskElement) {
 }
 
 // Функция сохранения описания
-function saveTaskDescription(event) {
-  var taskElement = event.target.closest('.task');
-  if (!taskElement) return;
-  var index = parseInt(taskElement.dataset.originalIndex);
-  if (isNaN(index)) return;
-  var isCompleted = taskElement.classList.contains('completed-task');
-  var editorId = "editor-".concat(index);
-  var editor = activeEditors[editorId];
-  if (!editor) return;
-  var editorContainer = taskElement.querySelector("#".concat(editorId));
-  var textDescription = taskElement.querySelector('.task-description-text');
-  var editorButtons = taskElement.querySelector('.editor-buttons');
-  if (!editorContainer || !textDescription || !editorButtons) return;
-  try {
-    var markdownContent = editor.getMarkdown();
-    var htmlContent = editor.getHTML();
-    if (isCompleted) {
-      if (tasks.completed[index]) {
-        tasks.completed[index].description = markdownContent;
-      }
-    } else {
-      if (tasks.active[index]) {
-        tasks.active[index].description = markdownContent;
-      }
-    }
-    saveTasks();
-    textDescription.innerHTML = htmlContent || 'Нет описания';
-    textDescription.classList.remove('hidden');
-    editorContainer.classList.add('hidden');
-    editorButtons.classList.add('hidden');
+function saveTaskDescription(_x6) {
+  return _saveTaskDescription.apply(this, arguments);
+} // Функция отмены редактирования описания
+function _saveTaskDescription() {
+  _saveTaskDescription = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(event) {
+    var taskElement, index, editorId, editor, editorContainer, textDescription, editorButtons, markdownContent, htmlContent, taskId, _t1;
+    return _regenerator().w(function (_context12) {
+      while (1) switch (_context12.n) {
+        case 0:
+          taskElement = event.target.closest('.task');
+          if (taskElement) {
+            _context12.n = 1;
+            break;
+          }
+          return _context12.a(2);
+        case 1:
+          index = parseInt(taskElement.dataset.originalIndex);
+          if (!isNaN(index)) {
+            _context12.n = 2;
+            break;
+          }
+          return _context12.a(2);
+        case 2:
+          editorId = "editor-".concat(index);
+          editor = activeEditors[editorId];
+          if (editor) {
+            _context12.n = 3;
+            break;
+          }
+          return _context12.a(2);
+        case 3:
+          editorContainer = taskElement.querySelector("#".concat(editorId));
+          textDescription = taskElement.querySelector('.task-description-text');
+          editorButtons = taskElement.querySelector('.editor-buttons');
+          if (!(!editorContainer || !textDescription || !editorButtons)) {
+            _context12.n = 4;
+            break;
+          }
+          return _context12.a(2);
+        case 4:
+          _context12.p = 4;
+          markdownContent = editor.getMarkdown();
+          htmlContent = editor.getHTML();
+          taskId = taskElement.dataset.taskId; // Сохраняем описание в БД
+          _context12.n = 5;
+          return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateTask(taskId, {
+            description: markdownContent
+          });
+        case 5:
+          textDescription.innerHTML = htmlContent || 'Нет описания';
+          textDescription.classList.remove('hidden');
+          editorContainer.classList.add('hidden');
+          editorButtons.classList.add('hidden');
 
-    // Включаем перетаскивание обратно после сохранения
-    toggleTaskDraggable(taskElement, true);
-    destroyEditor(editorId);
-  } catch (e) {
-    console.error('Ошибка при сохранении описания:', e);
-  }
+          // Включаем перетаскивание обратно после сохранения
+          toggleTaskDraggable(taskElement, true);
+          destroyEditor(editorId);
+
+          // Перезагружаем задачи для обновления данных
+          _context12.n = 6;
+          return loadTasks();
+        case 6:
+          _context12.n = 8;
+          break;
+        case 7:
+          _context12.p = 7;
+          _t1 = _context12.v;
+          console.error('Ошибка при сохранении описания:', _t1);
+        case 8:
+          return _context12.a(2);
+      }
+    }, _callee12, null, [[4, 7]]);
+  }));
+  return _saveTaskDescription.apply(this, arguments);
 }
-
-// Функция отмены редактирования описания
 function cancelTaskDescriptionEditing(event) {
   var taskElement = event.target.closest('.task');
   if (!taskElement) return;
@@ -59662,38 +59745,38 @@ function destroyEditor(editorId) {
 }
 
 // Функция изменения даты у задачи
-function changeTaskDate(_x4) {
+function changeTaskDate(_x7) {
   return _changeTaskDate.apply(this, arguments);
 } // Функция для форматирование даты для отображения
 function _changeTaskDate() {
-  _changeTaskDate = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(event) {
+  _changeTaskDate = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14(event) {
     var taskElement, dateWrapper, currentDateSpan, changeDateBtn, originalDate, dateInput, _originalDate$split, _originalDate$split2, day, month, year, saveDate, cancelDateEdit, handleKeyDown, handleOutsideClick;
-    return _regenerator().w(function (_context11) {
-      while (1) switch (_context11.n) {
+    return _regenerator().w(function (_context14) {
+      while (1) switch (_context14.n) {
         case 0:
           taskElement = event.target.closest('.task');
           if (taskElement) {
-            _context11.n = 1;
+            _context14.n = 1;
             break;
           }
-          return _context11.a(2);
+          return _context14.a(2);
         case 1:
           // Отключаем перетаскивание при редактировании даты
           toggleTaskDraggable(taskElement, false);
           dateWrapper = taskElement.querySelector('.task-date-wrapper');
           if (dateWrapper) {
-            _context11.n = 2;
+            _context14.n = 2;
             break;
           }
-          return _context11.a(2);
+          return _context14.a(2);
         case 2:
           currentDateSpan = dateWrapper.querySelector('.task-due-date');
           changeDateBtn = dateWrapper.querySelector('.task-change-date');
           if (!(!currentDateSpan || !changeDateBtn)) {
-            _context11.n = 3;
+            _context14.n = 3;
             break;
           }
-          return _context11.a(2);
+          return _context14.a(2);
         case 3:
           originalDate = currentDateSpan.textContent;
           dateInput = document.createElement('input');
@@ -59707,20 +59790,20 @@ function _changeTaskDate() {
           changeDateBtn.classList.add('hidden');
           dateInput.focus();
           saveDate = /*#__PURE__*/function () {
-            var _ref6 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
-              var taskId, newDate, newSpan, _t9;
-              return _regenerator().w(function (_context10) {
-                while (1) switch (_context10.n) {
+            var _ref8 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13() {
+              var taskId, newDate, newSpan, _t10;
+              return _regenerator().w(function (_context13) {
+                while (1) switch (_context13.n) {
                   case 0:
-                    _context10.p = 0;
+                    _context13.p = 0;
                     taskId = taskElement.dataset.taskId;
                     newDate = dateInput.value || null;
-                    _context10.n = 1;
+                    _context13.n = 1;
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateTask(taskId, {
                       due_date: newDate
                     });
                   case 1:
-                    _context10.n = 2;
+                    _context13.n = 2;
                     return loadTasks();
                   case 2:
                     // Перезагружаем задачи для обновления UI
@@ -59728,12 +59811,12 @@ function _changeTaskDate() {
                     // Включаем перетаскивание обратно после сохранения
                     toggleTaskDraggable(taskElement, true);
                     document.removeEventListener('click', handleOutsideClick);
-                    _context10.n = 4;
+                    _context13.n = 4;
                     break;
                   case 3:
-                    _context10.p = 3;
-                    _t9 = _context10.v;
-                    console.error('Ошибка при обновлении даты:', _t9);
+                    _context13.p = 3;
+                    _t10 = _context13.v;
+                    console.error('Ошибка при обновлении даты:', _t10);
                     // Возвращаем оригинальную дату в случае ошибки
                     newSpan = document.createElement('span');
                     newSpan.className = 'task-due-date';
@@ -59741,12 +59824,12 @@ function _changeTaskDate() {
                     dateInput.replaceWith(newSpan);
                     changeDateBtn.classList.remove('hidden');
                   case 4:
-                    return _context10.a(2);
+                    return _context13.a(2);
                 }
-              }, _callee10, null, [[0, 3]]);
+              }, _callee13, null, [[0, 3]]);
             }));
             return function saveDate() {
-              return _ref6.apply(this, arguments);
+              return _ref8.apply(this, arguments);
             };
           }();
           cancelDateEdit = function cancelDateEdit() {
@@ -59776,9 +59859,9 @@ function _changeTaskDate() {
           dateInput.addEventListener('keydown', handleKeyDown);
           document.addEventListener('click', handleOutsideClick);
         case 4:
-          return _context11.a(2);
+          return _context14.a(2);
       }
-    }, _callee11);
+    }, _callee14);
   }));
   return _changeTaskDate.apply(this, arguments);
 }
@@ -59793,82 +59876,82 @@ function formatDate(dateString) {
 }
 
 // Функция удаления задачи
-function deleteTask(_x5) {
+function deleteTask(_x8) {
   return _deleteTask.apply(this, arguments);
 } // Функция отметки задачи как выполненной/невыполненной
 function _deleteTask() {
-  _deleteTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(event) {
-    var _taskElement, taskId, _t0;
-    return _regenerator().w(function (_context12) {
-      while (1) switch (_context12.n) {
+  _deleteTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15(event) {
+    var _taskElement, taskId, _t11;
+    return _regenerator().w(function (_context15) {
+      while (1) switch (_context15.n) {
         case 0:
-          _context12.p = 0;
+          _context15.p = 0;
           _taskElement = event.target.closest('.task');
           taskId = _taskElement.dataset.taskId;
-          _context12.n = 1;
+          _context15.n = 1;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].deleteTask(taskId);
         case 1:
-          _context12.n = 2;
+          _context15.n = 2;
           return loadTasks();
         case 2:
-          _context12.n = 4;
+          _context15.n = 4;
           break;
         case 3:
-          _context12.p = 3;
-          _t0 = _context12.v;
-          console.error('Ошибка при удалении задачи:', _t0);
+          _context15.p = 3;
+          _t11 = _context15.v;
+          console.error('Ошибка при удалении задачи:', _t11);
         case 4:
-          return _context12.a(2);
+          return _context15.a(2);
       }
-    }, _callee12, null, [[0, 3]]);
+    }, _callee15, null, [[0, 3]]);
   }));
   return _deleteTask.apply(this, arguments);
 }
-function completeTask(_x6) {
+function completeTask(_x9) {
   return _completeTask.apply(this, arguments);
 } // Функция инициализации диаграммы
 function _completeTask() {
-  _completeTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(event) {
-    var taskElement, taskId, isCompleted, _t1;
-    return _regenerator().w(function (_context13) {
-      while (1) switch (_context13.n) {
+  _completeTask = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16(event) {
+    var taskElement, taskId, isCompleted, _t12;
+    return _regenerator().w(function (_context16) {
+      while (1) switch (_context16.n) {
         case 0:
           taskElement = event.target.closest('.task');
           if (taskElement) {
-            _context13.n = 1;
+            _context16.n = 1;
             break;
           }
-          return _context13.a(2);
+          return _context16.a(2);
         case 1:
-          _context13.p = 1;
+          _context16.p = 1;
           taskId = taskElement.dataset.taskId;
           isCompleted = taskElement.dataset.isCompleted === 'true';
           if (!isCompleted) {
-            _context13.n = 3;
+            _context16.n = 3;
             break;
           }
-          _context13.n = 2;
+          _context16.n = 2;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].uncompleteTask(taskId);
         case 2:
-          _context13.n = 4;
+          _context16.n = 4;
           break;
         case 3:
-          _context13.n = 4;
+          _context16.n = 4;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].completeTask(taskId);
         case 4:
-          _context13.n = 5;
+          _context16.n = 5;
           return loadTasks();
         case 5:
-          _context13.n = 7;
+          _context16.n = 7;
           break;
         case 6:
-          _context13.p = 6;
-          _t1 = _context13.v;
-          console.error('Ошибка при изменении статуса задачи:', _t1);
+          _context16.p = 6;
+          _t12 = _context16.v;
+          console.error('Ошибка при изменении статуса задачи:', _t12);
         case 7:
-          return _context13.a(2);
+          return _context16.a(2);
       }
-    }, _callee13, null, [[1, 6]]);
+    }, _callee16, null, [[1, 6]]);
   }));
   return _completeTask.apply(this, arguments);
 }
@@ -60155,26 +60238,26 @@ function initExportModal() {
   });
 
   // Обработчик для кнопки создания пдф, с ожидаением генерации файла
-  document.getElementById('generate-pdf-btn').addEventListener('click', /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-    var _t2;
-    return _regenerator().w(function (_context3) {
-      while (1) switch (_context3.n) {
+  document.getElementById('generate-pdf-btn').addEventListener('click', /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+    var _t4;
+    return _regenerator().w(function (_context5) {
+      while (1) switch (_context5.n) {
         case 0:
-          _context3.p = 0;
-          _context3.n = 1;
+          _context5.p = 0;
+          _context5.n = 1;
           return generatePdf();
         case 1:
-          _context3.n = 3;
+          _context5.n = 3;
           break;
         case 2:
-          _context3.p = 2;
-          _t2 = _context3.v;
-          console.error('Ошибка при генерации PDF:', _t2);
+          _context5.p = 2;
+          _t4 = _context5.v;
+          console.error('Ошибка при генерации PDF:', _t4);
           alert('Произошла ошибка при генерации PDF. Пожалуйста, попробуйте еще раз.');
         case 3:
-          return _context3.a(2);
+          return _context5.a(2);
       }
-    }, _callee3, null, [[0, 2]]);
+    }, _callee5, null, [[0, 2]]);
   })));
 
   // Обработчики для закрытия окна
@@ -60304,11 +60387,11 @@ function generatePdf() {
   return _generatePdf.apply(this, arguments);
 } // Функция для добавления задачи в PDF
 function _generatePdf() {
-  _generatePdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14() {
+  _generatePdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee17() {
     var _document$querySelect;
     var exportTasks, docDefinition, totalTasks, chartType, productivityType;
-    return _regenerator().w(function (_context14) {
-      while (1) switch (_context14.n) {
+    return _regenerator().w(function (_context17) {
+      while (1) switch (_context17.n) {
         case 0:
           // Получаем задачи для экспорта
           exportTasks = getTasksForExport(); // Создаем документ
@@ -60408,19 +60491,19 @@ function _generatePdf() {
           // Добавляем диаграмму, если выбрано
           chartType = document.getElementById('export-chart-type').value;
           if (!(chartType !== EXPORT_CHART_TYPES.NONE && totalTasks > 0)) {
-            _context14.n = 1;
+            _context17.n = 1;
             break;
           }
-          _context14.n = 1;
+          _context17.n = 1;
           return addChartToPdf(docDefinition, exportTasks, chartType);
         case 1:
           // Добавляем график продуктивности, если выбрано
           productivityType = document.getElementById('export-productivity-type').value;
           if (!(productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE)) {
-            _context14.n = 2;
+            _context17.n = 2;
             break;
           }
-          _context14.n = 2;
+          _context17.n = 2;
           return addProductivityChartToPdf(docDefinition, productivityType);
         case 2:
           // Генерируем PDF
@@ -60429,9 +60512,9 @@ function _generatePdf() {
           // Закрываем модальное окно
           (_document$querySelect = document.querySelector('.export-modal')) === null || _document$querySelect === void 0 || _document$querySelect.remove();
         case 3:
-          return _context14.a(2);
+          return _context17.a(2);
       }
-    }, _callee14);
+    }, _callee17);
   }));
   return _generatePdf.apply(this, arguments);
 }
@@ -60478,14 +60561,14 @@ function addTaskToPdf(docDefinition, task, isCompleted) {
 }
 
 // Функция для добавления диаграммы в PDF
-function addChartToPdf(_x7, _x8, _x9) {
+function addChartToPdf(_x0, _x1, _x10) {
   return _addChartToPdf.apply(this, arguments);
 } // Функция для добавления графика продуктивности в PDF
 function _addChartToPdf() {
-  _addChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15(docDefinition, exportTasks, chartType) {
-    var chartData, chartTitle, categoryCounts, categoryColors, labels, data, backgroundColors, chartImage, legendItems, _t10;
-    return _regenerator().w(function (_context15) {
-      while (1) switch (_context15.n) {
+  _addChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee18(docDefinition, exportTasks, chartType) {
+    var chartData, chartTitle, categoryCounts, categoryColors, labels, data, backgroundColors, chartImage, legendItems, _t13;
+    return _regenerator().w(function (_context18) {
+      while (1) switch (_context18.n) {
         case 0:
           // Создаем данные для диаграммы
 
@@ -60548,11 +60631,11 @@ function _addChartToPdf() {
             style: 'subheader',
             margin: [0, 20, 0, 10]
           });
-          _context15.p = 1;
-          _context15.n = 2;
+          _context18.p = 1;
+          _context18.n = 2;
           return getChartImage(chartData);
         case 2:
-          chartImage = _context15.v;
+          chartImage = _context18.v;
           // Добавляем саму диаграмму
           docDefinition.content.push({
             image: chartImage,
@@ -60573,32 +60656,32 @@ function _addChartToPdf() {
             stack: legendItems,
             margin: [50, 0, 0, 20]
           });
-          _context15.n = 4;
+          _context18.n = 4;
           break;
         case 3:
-          _context15.p = 3;
-          _t10 = _context15.v;
-          console.error('Ошибка при создании диаграммы:', _t10);
+          _context18.p = 3;
+          _t13 = _context18.v;
+          console.error('Ошибка при создании диаграммы:', _t13);
           docDefinition.content.push({
             text: 'Не удалось создать диаграмму',
             color: 'red',
             margin: [0, 0, 0, 20]
           });
         case 4:
-          return _context15.a(2);
+          return _context18.a(2);
       }
-    }, _callee15, null, [[1, 3]]);
+    }, _callee18, null, [[1, 3]]);
   }));
   return _addChartToPdf.apply(this, arguments);
 }
-function addProductivityChartToPdf(_x0, _x1) {
+function addProductivityChartToPdf(_x11, _x12) {
   return _addProductivityChartToPdf.apply(this, arguments);
 } // Функция для создания изображения круговой диаграммы
 function _addProductivityChartToPdf() {
-  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16(docDefinition, productivityType) {
-    var startDate, endDate, startDateStr, endDateStr, days, dateArray, currentDate, labels, data, chartData, chartImage, _t11;
-    return _regenerator().w(function (_context16) {
-      while (1) switch (_context16.n) {
+  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee19(docDefinition, productivityType) {
+    var startDate, endDate, startDateStr, endDateStr, days, dateArray, currentDate, labels, data, chartData, chartImage, _t14;
+    return _regenerator().w(function (_context19) {
+      while (1) switch (_context19.n) {
         case 0:
           endDate = new Date();
           endDate.setHours(23, 59, 59, 999);
@@ -60665,11 +60748,11 @@ function _addProductivityChartToPdf() {
               borderWidth: 1
             }]
           };
-          _context16.p = 1;
-          _context16.n = 2;
+          _context19.p = 1;
+          _context19.n = 2;
           return getBarChartImage(chartData);
         case 2:
-          chartImage = _context16.v;
+          chartImage = _context19.v;
           // Добавляем сам график
           docDefinition.content.push({
             image: chartImage,
@@ -60677,21 +60760,21 @@ function _addProductivityChartToPdf() {
             alignment: 'center',
             margin: [0, 0, 0, 20]
           });
-          _context16.n = 4;
+          _context19.n = 4;
           break;
         case 3:
-          _context16.p = 3;
-          _t11 = _context16.v;
-          console.error('Ошибка при создании графика продуктивности:', _t11);
+          _context19.p = 3;
+          _t14 = _context19.v;
+          console.error('Ошибка при создании графика продуктивности:', _t14);
           docDefinition.content.push({
             text: 'Не удалось создать график продуктивности',
             color: 'red',
             margin: [0, 0, 0, 20]
           });
         case 4:
-          return _context16.a(2);
+          return _context19.a(2);
       }
-    }, _callee16, null, [[1, 3]]);
+    }, _callee19, null, [[1, 3]]);
   }));
   return _addProductivityChartToPdf.apply(this, arguments);
 }
