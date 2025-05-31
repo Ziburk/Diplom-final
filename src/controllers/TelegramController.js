@@ -18,6 +18,22 @@ class TelegramController {
                 });
             }
 
+            // Проверяем валидность данных от Telegram
+            if (!User.validateTelegramHash(telegramData)) {
+                return res.status(401).json({
+                    error: 'Невалидные данные авторизации'
+                });
+            }
+
+            // Проверяем время авторизации (не более 24 часов)
+            const authTimestamp = parseInt(telegramData.auth_date);
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+            if (currentTimestamp - authTimestamp > 86400) {
+                return res.status(401).json({
+                    error: 'Срок действия данных авторизации истек'
+                });
+            }
+
             // Создаем или обновляем пользователя
             const user = await User.createOrUpdateFromTelegram(telegramData);
 

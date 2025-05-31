@@ -1,4 +1,7 @@
 const pool = require('../config/db');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const config = require('../config/config');
 
 class User {
     /**
@@ -119,6 +122,56 @@ class User {
             console.error('Error in deleteUser:', error);
             throw error;
         }
+    }
+
+    /**
+     * Генерирует JWT токен для пользователя
+     * @param {Object} user - Объект пользователя
+     * @returns {string} JWT токен
+     */
+    static generateToken(user) {
+        return jwt.sign(
+            { 
+                user_id: user.user_id,
+                telegram_chat_id: user.telegram_chat_id 
+            },
+            config.jwtSecret,
+            { expiresIn: config.jwtExpiresIn }
+        );
+    }
+
+    /**
+     * Проверяет валидность данных от Telegram
+     * @param {Object} telegramData - Данные от Telegram
+     * @returns {boolean} Результат проверки
+     */
+    static validateTelegramHash(telegramData) {
+        const { hash, ...data } = telegramData;
+        
+        // Если нет хэша или данных авторизации, считаем невалидным
+        if (!hash || !data.auth_date) {
+            return false;
+        }
+
+        // Создаем отсортированную строку данных
+        const dataCheckString = Object.keys(data)
+            .sort()
+            .map(key => `${key}=${data[key]}`)
+            .join('\n');
+
+        // Создаем секретный ключ из токена бота
+        const secretKey = crypto
+            .createHash('sha256')
+            .update(config.telegramBotToken)
+            .digest();
+
+        // Создаем хэш для проверки
+        const hmac = crypto
+            .createHmac('sha256', secretKey)
+            .update(dataCheckString)
+            .digest('hex');
+
+        return hmac === hash;
     }
 }
 

@@ -22,10 +22,10 @@ const auth = async (req, res, next) => {
         const decoded = jwt.verify(token, config.jwtSecret);
         
         // Проверяем существование пользователя
-        const user = await User.getById(decoded.userId);
+        const user = await User.getById(decoded.user_id);
         
         if (!user) {
-            throw new Error();
+            throw new Error('Пользователь не найден');
         }
 
         // Проверяем активность пользователя
@@ -39,6 +39,7 @@ const auth = async (req, res, next) => {
         
         next();
     } catch (error) {
+        console.error('Auth middleware error:', error);
         res.status(401).json({ error: 'Пожалуйста, авторизуйтесь' });
     }
 };
