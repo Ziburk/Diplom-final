@@ -67,7 +67,19 @@ class CategoryController {
                 });
             }
 
-            const category = await Category.update(categoryId, userId, { name, color });
+            // Получаем текущую категорию
+            const currentCategory = await Category.getById(categoryId, userId);
+            if (!currentCategory) {
+                return res.status(404).json({ error: 'Категория не найдена' });
+            }
+
+            // Обновляем только переданные поля, сохраняя текущие значения для остальных
+            const updateData = {
+                name: name || currentCategory.name,
+                color: color || currentCategory.color
+            };
+
+            const category = await Category.update(categoryId, userId, updateData);
 
             if (!category) {
                 return res.status(404).json({ error: 'Категория не найдена' });

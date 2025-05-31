@@ -644,7 +644,11 @@ function renderCategoriesList(container) {
         // Обработчик события для изменения цвета категории
         categoryElement.querySelector('.category-color-picker').addEventListener('input', async (e) => {
             try {
-                await todoAPI.updateCategory(category.id, { color: e.target.value });
+                const currentName = categories[category.id].name;
+                await todoAPI.updateCategory(category.id, { 
+                    name: currentName,
+                    color: e.target.value 
+                });
                 categories[category.id].color = e.target.value;
                 renderTasks();
             } catch (error) {

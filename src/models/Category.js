@@ -44,6 +44,23 @@ class Category {
     }
 
     /**
+     * Получает категорию по ID
+     * @param {string} categoryId - ID категории
+     * @param {number} userId - ID пользователя
+     * @returns {Promise<Object>} Категория
+     */
+    static async getById(categoryId, userId) {
+        try {
+            const query = 'SELECT * FROM categories WHERE category_id = $1 AND user_id = $2';
+            const result = await pool.query(query, [categoryId, userId]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error in getById:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Обновляет категорию
      * @param {string} categoryId - ID категории
      * @param {number} userId - ID пользователя

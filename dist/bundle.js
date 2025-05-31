@@ -59193,13 +59193,15 @@ function renderCategoriesList(container) {
     // Обработчик события для изменения цвета категории
     categoryElement.querySelector('.category-color-picker').addEventListener('input', /*#__PURE__*/function () {
       var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(e) {
-        var _t3;
+        var currentName, _t3;
         return _regenerator().w(function (_context4) {
           while (1) switch (_context4.n) {
             case 0:
               _context4.p = 0;
+              currentName = categories[category.id].name;
               _context4.n = 1;
               return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateCategory(category.id, {
+                name: currentName,
                 color: e.target.value
               });
             case 1:
