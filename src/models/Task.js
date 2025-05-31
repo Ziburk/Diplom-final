@@ -20,17 +20,26 @@ class Task {
                 due_date = null
             } = taskData;
 
+            // Получаем максимальный порядковый номер для активных задач пользователя
+            const orderQuery = `
+                SELECT COALESCE(MIN("order") - 1, 0) as new_order
+                FROM tasks
+                WHERE user_id = $1 AND status = 'active'
+            `;
+            const orderResult = await pool.query(orderQuery, [userId]);
+            const newOrder = orderResult.rows[0].new_order;
+
             const query = `
                 INSERT INTO tasks (
                     user_id, title, description, category_id,
-                    due_date, status
+                    due_date, status, "order"
                 )
-                VALUES ($1, $2, $3, $4, $5, 'active')
+                VALUES ($1, $2, $3, $4, $5, 'active', $6)
                 RETURNING *
             `;
 
             const result = await pool.query(query, [
-                userId, title, description, category_id, due_date
+                userId, title, description, category_id, due_date, newOrder
             ]);
 
             return result.rows[0];
