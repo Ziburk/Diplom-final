@@ -1428,53 +1428,8 @@ function updateStats() {
     }
 }
 
-// Функция для инициализации графика продуктивности
-function initProductivityChart() {
-    const ctx = document.getElementById('productivityChart').getContext('2d');
-
-    // Если график уже есть, то уничтожаем его
-    if (productivityChart) {
-        productivityChart.destroy();
-    }
-
-    // Получаем данные для графика
-    const { labels, data } = getProductivityData();
-
-    productivityChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Выполнено задач',
-                data: data,
-                backgroundColor: '#4CAF50',
-                borderColor: '#388E3C',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Количество задач'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Дата'
-                    }
-                }
-            }
-        }
-    });
-}
-
 // Функция для получения данных продуктивности
-function getProductivityData() {
+async function getProductivityData() {
     const periodSelect = document.getElementById('productivity-period');
     const period = periodSelect.value;
 
@@ -1503,26 +1458,38 @@ function getProductivityData() {
         startDate.setHours(0, 0, 0, 0);
     }
 
-    // Создаем массив дат для отображения
-    const dateArray = [];
-    const currentDate = new Date(startDate);
+    try {
+        // Получаем данные с сервера
+        const productivityData = await todoAPI.getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
 
-    while (currentDate <= endDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+        // Создаем массив дат для отображения
+        const dateArray = [];
+        const currentDate = new Date(startDate);
+
+        while (currentDate <= endDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Подготавливаем данные для графика
+        const labels = dateArray.map(date => formatDateForChart(date));
+        const data = dateArray.map(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = productivityData.find(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
+        });
+
+        return { labels, data };
+    } catch (error) {
+        console.error('Ошибка при получении данных продуктивности:', error);
+        return { labels: [], data: [] };
     }
-
-    // Подготавливаем данные для графика
-    const labels = dateArray.map(date => formatDateForChart(date));
-    const data = dateArray.map(date => {
-        return tasks.completed.filter(task => {
-            if (!task.lastStatusChange) return false;
-            const taskDate = new Date(task.lastStatusChange);
-            return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-        }).length;
-    });
-
-    return { labels, data };
 }
 
 // Форматирование даты для графика
@@ -1533,14 +1500,62 @@ function formatDateForChart(date) {
     });
 }
 
+// Функция для инициализации графика продуктивности
+async function initProductivityChart() {
+    const ctx = document.getElementById('productivityChart').getContext('2d');
+
+    // Если график уже есть, то уничтожаем его
+    if (productivityChart) {
+        productivityChart.destroy();
+    }
+
+    // Получаем данные для графика
+    const { labels, data } = await getProductivityData();
+
+    productivityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Выполнено задач',
+                data: data,
+                backgroundColor: '#4CAF50',
+                borderColor: '#388E3C',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Количество задач'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Дата'
+                    }
+                }
+            }
+        }
+    });
+}
+
 // Обновление графика продуктивности
-function updateProductivityChart() {
+async function updateProductivityChart() {
     if (document.getElementById('statistics').classList.contains('active')) {
-        initProductivityChart();
+        await initProductivityChart();
     }
 }
 
-// Функция инициализации модального окна экспорта
+// Функция для инициализации модального окна экспорта
 function initExportModal() {
     const modal = document.createElement('div');
     modal.className = 'export-modal';

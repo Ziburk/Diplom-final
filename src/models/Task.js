@@ -302,8 +302,10 @@ class Task {
     /**
      * Получает данные для графика продуктивности
      * @param {number} userId - ID пользователя
-     * @param {Object} params - Параметры выборки
-     * @returns {Promise<Array>} Данные для графика
+     * @param {Object} params - Параметры запроса
+     * @param {string} params.startDate - Начальная дата
+     * @param {string} params.endDate - Конечная дата
+     * @returns {Promise<Array>} Массив с данными о продуктивности
      */
     static async getProductivityData(userId, { startDate, endDate }) {
         try {
@@ -316,7 +318,7 @@ class Task {
                     WHERE date < date_trunc('day', $3::timestamp)
                 )
                 SELECT 
-                    dates.date::date,
+                    dates.date::date as date,
                     COUNT(t.task_id) as completed_count
                 FROM dates
                 LEFT JOIN tasks t ON 
@@ -324,7 +326,7 @@ class Task {
                     AND t.user_id = $1
                     AND t.status = 'completed'
                 GROUP BY dates.date
-                ORDER BY dates.date
+                ORDER BY dates.date;
             `;
 
             const result = await pool.query(query, [userId, startDate, endDate]);

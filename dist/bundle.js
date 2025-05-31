@@ -404,6 +404,37 @@ var TodoAPI = /*#__PURE__*/function () {
         return _updateTaskOrder.apply(this, arguments);
       }
       return updateTaskOrder;
+    }()
+    /**
+     * Получает данные о продуктивности за период
+     * @param {Object} params - Параметры запроса
+     * @param {string} params.startDate - Начальная дата
+     * @param {string} params.endDate - Конечная дата
+     * @returns {Promise<Array>} Массив с данными о продуктивности
+     */
+    )
+  }, {
+    key: "getProductivityData",
+    value: (function () {
+      var _getProductivityData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(params) {
+        var queryParams;
+        return _regenerator().w(function (_context13) {
+          while (1) switch (_context13.n) {
+            case 0:
+              queryParams = new URLSearchParams(params);
+              return _context13.a(2, this.fetchAPI("/tasks/stats/productivity?".concat(queryParams.toString()), {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }));
+          }
+        }, _callee13, this);
+      }));
+      function getProductivityData(_x12) {
+        return _getProductivityData.apply(this, arguments);
+      }
+      return getProductivityData;
     }())
   }]);
 }(); // Создаем и экспортируем экземпляр API
@@ -60254,107 +60285,86 @@ function updateStats() {
   }
 }
 
-// Функция для инициализации графика продуктивности
-function initProductivityChart() {
-  var ctx = document.getElementById('productivityChart').getContext('2d');
-
-  // Если график уже есть, то уничтожаем его
-  if (productivityChart) {
-    productivityChart.destroy();
-  }
-
-  // Получаем данные для графика
-  var _getProductivityData = getProductivityData(),
-    labels = _getProductivityData.labels,
-    data = _getProductivityData.data;
-  productivityChart = new chart_js_auto__WEBPACK_IMPORTED_MODULE_2__["default"](ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Выполнено задач',
-        data: data,
-        backgroundColor: '#4CAF50',
-        borderColor: '#388E3C',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Количество задач'
-          }
-        },
-        x: {
-          title: {
-            display: true,
-            text: 'Дата'
-          }
-        }
-      }
-    }
-  });
-}
-
 // Функция для получения данных продуктивности
 function getProductivityData() {
-  var periodSelect = document.getElementById('productivity-period');
-  var period = periodSelect.value;
-  var startDate,
-    endDate = new Date();
-  endDate.setHours(23, 59, 59, 999); // Конец дня
+  return _getProductivityData.apply(this, arguments);
+} // Форматирование даты для графика
+function _getProductivityData() {
+  _getProductivityData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee20() {
+    var periodSelect, period, startDate, endDate, startDateStr, endDateStr, days, productivityData, dateArray, currentDate, labels, data, _t15;
+    return _regenerator().w(function (_context20) {
+      while (1) switch (_context20.n) {
+        case 0:
+          periodSelect = document.getElementById('productivity-period');
+          period = periodSelect.value;
+          endDate = new Date();
+          endDate.setHours(23, 59, 59, 999); // Конец дня
 
-  if (period === PRODUCTIVITY_PERIODS.CUSTOM) {
-    var startDateStr = document.getElementById('productivity-start-date').value;
-    var endDateStr = document.getElementById('productivity-end-date').value;
-    if (!startDateStr || !endDateStr) {
-      // Если даты не выбраны, используем последние 7 дней по умолчанию
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 6);
-      startDate.setHours(0, 0, 0, 0);
-    } else {
-      startDate = new Date(startDateStr);
-      endDate = new Date(endDateStr);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-    }
-  } else {
-    var days = parseInt(period);
-    startDate = new Date();
-    startDate.setDate(startDate.getDate() - days + 1);
-    startDate.setHours(0, 0, 0, 0);
-  }
+          if (period === PRODUCTIVITY_PERIODS.CUSTOM) {
+            startDateStr = document.getElementById('productivity-start-date').value;
+            endDateStr = document.getElementById('productivity-end-date').value;
+            if (!startDateStr || !endDateStr) {
+              // Если даты не выбраны, используем последние 7 дней по умолчанию
+              startDate = new Date();
+              startDate.setDate(startDate.getDate() - 6);
+              startDate.setHours(0, 0, 0, 0);
+            } else {
+              startDate = new Date(startDateStr);
+              endDate = new Date(endDateStr);
+              startDate.setHours(0, 0, 0, 0);
+              endDate.setHours(23, 59, 59, 999);
+            }
+          } else {
+            days = parseInt(period);
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - days + 1);
+            startDate.setHours(0, 0, 0, 0);
+          }
+          _context20.p = 1;
+          _context20.n = 2;
+          return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          });
+        case 2:
+          productivityData = _context20.v;
+          // Создаем массив дат для отображения
+          dateArray = [];
+          currentDate = new Date(startDate);
+          while (currentDate <= endDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
 
-  // Создаем массив дат для отображения
-  var dateArray = [];
-  var currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    dateArray.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  // Подготавливаем данные для графика
-  var labels = dateArray.map(function (date) {
-    return formatDateForChart(date);
-  });
-  var data = dateArray.map(function (date) {
-    return tasks.completed.filter(function (task) {
-      if (!task.lastStatusChange) return false;
-      var taskDate = new Date(task.lastStatusChange);
-      return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-    }).length;
-  });
-  return {
-    labels: labels,
-    data: data
-  };
+          // Подготавливаем данные для графика
+          labels = dateArray.map(function (date) {
+            return formatDateForChart(date);
+          });
+          data = dateArray.map(function (date) {
+            var dateStr = date.toISOString().split('T')[0];
+            var dayData = productivityData.find(function (item) {
+              var itemDate = new Date(item.date);
+              return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
+          });
+          return _context20.a(2, {
+            labels: labels,
+            data: data
+          });
+        case 3:
+          _context20.p = 3;
+          _t15 = _context20.v;
+          console.error('Ошибка при получении данных продуктивности:', _t15);
+          return _context20.a(2, {
+            labels: [],
+            data: []
+          });
+      }
+    }, _callee20, null, [[1, 3]]);
+  }));
+  return _getProductivityData.apply(this, arguments);
 }
-
-// Форматирование даты для графика
 function formatDateForChart(date) {
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -60362,14 +60372,90 @@ function formatDateForChart(date) {
   });
 }
 
-// Обновление графика продуктивности
-function updateProductivityChart() {
-  if (document.getElementById('statistics').classList.contains('active')) {
-    initProductivityChart();
-  }
-}
+// Функция для инициализации графика продуктивности
+function initProductivityChart() {
+  return _initProductivityChart.apply(this, arguments);
+} // Обновление графика продуктивности
+function _initProductivityChart() {
+  _initProductivityChart = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee21() {
+    var ctx, _yield$getProductivit, labels, data;
+    return _regenerator().w(function (_context21) {
+      while (1) switch (_context21.n) {
+        case 0:
+          ctx = document.getElementById('productivityChart').getContext('2d'); // Если график уже есть, то уничтожаем его
+          if (productivityChart) {
+            productivityChart.destroy();
+          }
 
-// Функция инициализации модального окна экспорта
+          // Получаем данные для графика
+          _context21.n = 1;
+          return getProductivityData();
+        case 1:
+          _yield$getProductivit = _context21.v;
+          labels = _yield$getProductivit.labels;
+          data = _yield$getProductivit.data;
+          productivityChart = new chart_js_auto__WEBPACK_IMPORTED_MODULE_2__["default"](ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Выполнено задач',
+                data: data,
+                backgroundColor: '#4CAF50',
+                borderColor: '#388E3C',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1
+                  },
+                  title: {
+                    display: true,
+                    text: 'Количество задач'
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Дата'
+                  }
+                }
+              }
+            }
+          });
+        case 2:
+          return _context21.a(2);
+      }
+    }, _callee21);
+  }));
+  return _initProductivityChart.apply(this, arguments);
+}
+function updateProductivityChart() {
+  return _updateProductivityChart.apply(this, arguments);
+} // Функция для инициализации модального окна экспорта
+function _updateProductivityChart() {
+  _updateProductivityChart = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee22() {
+    return _regenerator().w(function (_context22) {
+      while (1) switch (_context22.n) {
+        case 0:
+          if (!document.getElementById('statistics').classList.contains('active')) {
+            _context22.n = 1;
+            break;
+          }
+          _context22.n = 1;
+          return initProductivityChart();
+        case 1:
+          return _context22.a(2);
+      }
+    }, _callee22);
+  }));
+  return _updateProductivityChart.apply(this, arguments);
+}
 function initExportModal() {
   var modal = document.createElement('div');
   modal.className = 'export-modal';
@@ -60545,11 +60631,11 @@ function generatePdf() {
   return _generatePdf.apply(this, arguments);
 } // Функция для добавления задачи в PDF
 function _generatePdf() {
-  _generatePdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee20() {
+  _generatePdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee23() {
     var _document$querySelect;
     var exportTasks, docDefinition, totalTasks, chartType, productivityType;
-    return _regenerator().w(function (_context20) {
-      while (1) switch (_context20.n) {
+    return _regenerator().w(function (_context23) {
+      while (1) switch (_context23.n) {
         case 0:
           // Получаем задачи для экспорта
           exportTasks = getTasksForExport(); // Создаем документ
@@ -60649,19 +60735,19 @@ function _generatePdf() {
           // Добавляем диаграмму, если выбрано
           chartType = document.getElementById('export-chart-type').value;
           if (!(chartType !== EXPORT_CHART_TYPES.NONE && totalTasks > 0)) {
-            _context20.n = 1;
+            _context23.n = 1;
             break;
           }
-          _context20.n = 1;
+          _context23.n = 1;
           return addChartToPdf(docDefinition, exportTasks, chartType);
         case 1:
           // Добавляем график продуктивности, если выбрано
           productivityType = document.getElementById('export-productivity-type').value;
           if (!(productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE)) {
-            _context20.n = 2;
+            _context23.n = 2;
             break;
           }
-          _context20.n = 2;
+          _context23.n = 2;
           return addProductivityChartToPdf(docDefinition, productivityType);
         case 2:
           // Генерируем PDF
@@ -60670,9 +60756,9 @@ function _generatePdf() {
           // Закрываем модальное окно
           (_document$querySelect = document.querySelector('.export-modal')) === null || _document$querySelect === void 0 || _document$querySelect.remove();
         case 3:
-          return _context20.a(2);
+          return _context23.a(2);
       }
-    }, _callee20);
+    }, _callee23);
   }));
   return _generatePdf.apply(this, arguments);
 }
@@ -60723,10 +60809,10 @@ function addChartToPdf(_x11, _x12, _x13) {
   return _addChartToPdf.apply(this, arguments);
 } // Функция для добавления графика продуктивности в PDF
 function _addChartToPdf() {
-  _addChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee21(docDefinition, exportTasks, chartType) {
-    var chartData, chartTitle, categoryCounts, categoryColors, labels, data, backgroundColors, chartImage, legendItems, _t15;
-    return _regenerator().w(function (_context21) {
-      while (1) switch (_context21.n) {
+  _addChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee24(docDefinition, exportTasks, chartType) {
+    var chartData, chartTitle, categoryCounts, categoryColors, labels, data, backgroundColors, chartImage, legendItems, _t16;
+    return _regenerator().w(function (_context24) {
+      while (1) switch (_context24.n) {
         case 0:
           // Создаем данные для диаграммы
 
@@ -60789,11 +60875,11 @@ function _addChartToPdf() {
             style: 'subheader',
             margin: [0, 20, 0, 10]
           });
-          _context21.p = 1;
-          _context21.n = 2;
+          _context24.p = 1;
+          _context24.n = 2;
           return getChartImage(chartData);
         case 2:
-          chartImage = _context21.v;
+          chartImage = _context24.v;
           // Добавляем саму диаграмму
           docDefinition.content.push({
             image: chartImage,
@@ -60814,21 +60900,21 @@ function _addChartToPdf() {
             stack: legendItems,
             margin: [50, 0, 0, 20]
           });
-          _context21.n = 4;
+          _context24.n = 4;
           break;
         case 3:
-          _context21.p = 3;
-          _t15 = _context21.v;
-          console.error('Ошибка при создании диаграммы:', _t15);
+          _context24.p = 3;
+          _t16 = _context24.v;
+          console.error('Ошибка при создании диаграммы:', _t16);
           docDefinition.content.push({
             text: 'Не удалось создать диаграмму',
             color: 'red',
             margin: [0, 0, 0, 20]
           });
         case 4:
-          return _context21.a(2);
+          return _context24.a(2);
       }
-    }, _callee21, null, [[1, 3]]);
+    }, _callee24, null, [[1, 3]]);
   }));
   return _addChartToPdf.apply(this, arguments);
 }
@@ -60836,10 +60922,10 @@ function addProductivityChartToPdf(_x14, _x15) {
   return _addProductivityChartToPdf.apply(this, arguments);
 } // Функция для создания изображения круговой диаграммы
 function _addProductivityChartToPdf() {
-  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee22(docDefinition, productivityType) {
-    var startDate, endDate, startDateStr, endDateStr, days, dateArray, currentDate, labels, data, chartData, chartImage, _t16;
-    return _regenerator().w(function (_context22) {
-      while (1) switch (_context22.n) {
+  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25(docDefinition, productivityType) {
+    var startDate, endDate, startDateStr, endDateStr, days, dateArray, currentDate, labels, data, chartData, chartImage, _t17;
+    return _regenerator().w(function (_context25) {
+      while (1) switch (_context25.n) {
         case 0:
           endDate = new Date();
           endDate.setHours(23, 59, 59, 999);
@@ -60906,11 +60992,11 @@ function _addProductivityChartToPdf() {
               borderWidth: 1
             }]
           };
-          _context22.p = 1;
-          _context22.n = 2;
+          _context25.p = 1;
+          _context25.n = 2;
           return getBarChartImage(chartData);
         case 2:
-          chartImage = _context22.v;
+          chartImage = _context25.v;
           // Добавляем сам график
           docDefinition.content.push({
             image: chartImage,
@@ -60918,21 +61004,21 @@ function _addProductivityChartToPdf() {
             alignment: 'center',
             margin: [0, 0, 0, 20]
           });
-          _context22.n = 4;
+          _context25.n = 4;
           break;
         case 3:
-          _context22.p = 3;
-          _t16 = _context22.v;
-          console.error('Ошибка при создании графика продуктивности:', _t16);
+          _context25.p = 3;
+          _t17 = _context25.v;
+          console.error('Ошибка при создании графика продуктивности:', _t17);
           docDefinition.content.push({
             text: 'Не удалось создать график продуктивности',
             color: 'red',
             margin: [0, 0, 0, 20]
           });
         case 4:
-          return _context22.a(2);
+          return _context25.a(2);
       }
-    }, _callee22, null, [[1, 3]]);
+    }, _callee25, null, [[1, 3]]);
   }));
   return _addProductivityChartToPdf.apply(this, arguments);
 }

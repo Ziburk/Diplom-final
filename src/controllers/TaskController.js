@@ -173,14 +173,20 @@ class TaskController {
      */
     static async getProductivityData(req, res) {
         try {
-            const userId = req.user.user_id;
+            const userId = req.user.user_id; // Используем правильное поле из объекта пользователя
             const { startDate, endDate } = req.query;
-
+            
             if (!startDate || !endDate) {
-                return res.status(400).json({ error: 'Необходимо указать период' });
+                return res.status(400).json({
+                    error: 'Необходимо указать начальную и конечную даты'
+                });
             }
 
-            const data = await Task.getProductivityData(userId, { startDate, endDate });
+            const data = await Task.getProductivityData(userId, {
+                startDate,
+                endDate
+            });
+
             res.json(data);
         } catch (error) {
             console.error('Error in getProductivityData:', error);

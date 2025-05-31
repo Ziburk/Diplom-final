@@ -161,6 +161,23 @@ class TodoAPI {
             throw error;
         }
     }
+
+    /**
+     * Получает данные о продуктивности за период
+     * @param {Object} params - Параметры запроса
+     * @param {string} params.startDate - Начальная дата
+     * @param {string} params.endDate - Конечная дата
+     * @returns {Promise<Array>} Массив с данными о продуктивности
+     */
+    async getProductivityData(params) {
+        const queryParams = new URLSearchParams(params);
+        return this.fetchAPI(`/tasks/stats/productivity?${queryParams.toString()}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
 }
 
 // Создаем и экспортируем экземпляр API
