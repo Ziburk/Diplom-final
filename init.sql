@@ -28,12 +28,10 @@ CREATE TABLE tasks (
     title VARCHAR(100) NOT NULL,
     description TEXT,
     due_date TIMESTAMP WITH TIME ZONE,
-    priority INTEGER CHECK (priority BETWEEN 1 AND 5),
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
-    "order" INTEGER,
-    tags TEXT[]
+    "order" INTEGER
 );
 
 -- Создание таблицы настроек уведомлений
