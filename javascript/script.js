@@ -610,6 +610,19 @@ function showCategoryManager() {
     });
 }
 
+// Функция для debounce
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Функция для вывода списка категорий в настройках категорий
 function renderCategoriesList(container) {
     container.innerHTML = '';
@@ -632,7 +645,10 @@ function renderCategoriesList(container) {
         // Обработчик события для изменения имени категории
         categoryElement.querySelector('.category-name').addEventListener('change', async (e) => {
             try {
-                await todoAPI.updateCategory(category.id, { name: e.target.value });
+                await todoAPI.updateCategory(category.id, { 
+                    name: e.target.value,
+                    color: category.color 
+                });
                 categories[category.id].name = e.target.value;
                 updateCategorySelectors();
                 renderTasks();
@@ -641,18 +657,58 @@ function renderCategoriesList(container) {
             }
         });
 
-        // Обработчик события для изменения цвета категории
-        categoryElement.querySelector('.category-color-picker').addEventListener('input', async (e) => {
+        // Создаем debounced функцию для обновления цвета
+        const debouncedColorUpdate = debounce(async (newColor) => {
             try {
                 const currentName = categories[category.id].name;
                 await todoAPI.updateCategory(category.id, { 
                     name: currentName,
-                    color: e.target.value 
+                    color: newColor 
                 });
-                categories[category.id].color = e.target.value;
+                categories[category.id].color = newColor;
                 renderTasks();
             } catch (error) {
                 console.error('Ошибка при обновлении цвета категории:', error);
+            }
+        }, 300); // Задержка в 300 миллисекунд
+
+        // Обработчик события для изменения цвета категории
+        const colorPicker = categoryElement.querySelector('.category-color-picker');
+        let lastColor = category.color;
+
+        // При изменении цвета только обновляем UI
+        colorPicker.addEventListener('input', (e) => {
+            const newColor = e.target.value;
+            categoryElement.style.borderColor = newColor;
+            const taskElements = document.querySelectorAll(`.task[data-category="${category.id}"]`);
+            taskElements.forEach(task => {
+                const categorySpan = task.querySelector('.task-category');
+                if (categorySpan) {
+                    categorySpan.style.backgroundColor = newColor;
+                }
+                task.style.borderColor = newColor;
+            });
+        });
+
+        // При отпускании кнопки мыши сохраняем изменения в БД
+        colorPicker.addEventListener('change', async (e) => {
+            const newColor = e.target.value;
+            if (newColor !== lastColor) {
+                try {
+                    const currentName = categories[category.id].name;
+                    await todoAPI.updateCategory(category.id, { 
+                        name: currentName,
+                        color: newColor 
+                    });
+                    categories[category.id].color = newColor;
+                    lastColor = newColor;
+                    renderTasks();
+                } catch (error) {
+                    console.error('Ошибка при обновлении цвета категории:', error);
+                    // В случае ошибки возвращаем предыдущий цвет
+                    e.target.value = lastColor;
+                    renderTasks();
+                }
             }
         });
 
@@ -1033,6 +1089,7 @@ async function saveTaskDescription(event) {
     const editorContainer = taskElement.querySelector(`#${editorId}`);
     const textDescription = taskElement.querySelector('.task-description-text');
     const editorButtons = taskElement.querySelector('.editor-buttons');
+    const descriptionBlock = taskElement.querySelector('.task-description');
 
     if (!editorContainer || !textDescription || !editorButtons) return;
 
@@ -1046,10 +1103,12 @@ async function saveTaskDescription(event) {
             description: markdownContent
         });
 
+        // Обновляем отображение
         textDescription.innerHTML = htmlContent || 'Нет описания';
         textDescription.classList.remove('hidden');
         editorContainer.classList.add('hidden');
         editorButtons.classList.add('hidden');
+        descriptionBlock.classList.remove('hidden'); // Убеждаемся, что блок описания остается видимым
 
         // Включаем перетаскивание обратно после сохранения
         toggleTaskDraggable(taskElement, true);
@@ -1058,6 +1117,15 @@ async function saveTaskDescription(event) {
         
         // Перезагружаем задачи для обновления данных
         await loadTasks();
+
+        // После перезагрузки задач находим обновленный элемент и открываем его описание
+        const updatedTaskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (updatedTaskElement) {
+            const updatedDescBlock = updatedTaskElement.querySelector('.task-description');
+            if (updatedDescBlock) {
+                updatedDescBlock.classList.remove('hidden');
+            }
+        }
     } catch (error) {
         console.error('Ошибка при сохранении описания:', error);
     }
