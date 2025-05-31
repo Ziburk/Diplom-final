@@ -289,7 +289,6 @@ function initTabs() {
 
 // Функция перетаскивания задачи
 function setupDragAndDrop() {
-
     // Получаем списки активных и завершенных задач
     const taskLists = document.querySelectorAll('.task-list');
 
@@ -299,12 +298,10 @@ function setupDragAndDrop() {
 
     // Проходимся по каждому списку
     taskLists.forEach(list => {
-
         // Начало перетаскивания
         list.addEventListener('dragstart', (e) => {
-
-            // Если взята задача, то добавляем ей класс
-            if (e.target.classList.contains('task')) {
+            // Проверяем, что это активная задача
+            if (e.target.classList.contains('task') && !e.target.classList.contains('completed-task')) {
                 draggedItem = e.target;
                 draggedItem.classList.add('dragging');
 
@@ -321,6 +318,9 @@ function setupDragAndDrop() {
 
                 // Разрешено только перетаскивание
                 e.dataTransfer.effectAllowed = 'move';
+            } else {
+                // Отменяем перетаскивание для выполненных задач
+                e.preventDefault();
             }
         });
 
@@ -330,11 +330,7 @@ function setupDragAndDrop() {
             e.dataTransfer.dropEffect = 'move';
 
             // Проверка, что перетаскивание корректно
-            if (!draggedItem || !placeholder) return;
-
-            // Проверяем, что перетаскивание происходит в том же списке
-            const isSameList = draggedItem.closest('.task-list') === list;
-            if (!isSameList) return;
+            if (!draggedItem || !placeholder || list.id !== 'current-tasks-list') return;
 
             // Добавляем класс для визуального выделения
             list.classList.add('drag-over');
@@ -373,10 +369,10 @@ function setupDragAndDrop() {
         });
 
         // Сброс элемента
-        list.addEventListener('drop', (e) => {
+        list.addEventListener('drop', async (e) => {
             e.preventDefault();
 
-            if (!draggedItem || !placeholder) return;
+            if (!draggedItem || !placeholder || list.id !== 'current-tasks-list') return;
 
             // Вставляем перетаскиваемый элемент вместо плейсхолдера
             if (placeholder.parentNode) {
@@ -386,8 +382,8 @@ function setupDragAndDrop() {
             draggedItem.style.display = '';
             list.classList.remove('drag-over');
 
-            // Обновляем порядок задач
-            updateTaskOrder(list);
+            // Обновляем порядок задач в БД
+            await updateTaskOrder(list);
         });
 
         // Завершение перетаскивания
@@ -413,45 +409,28 @@ function setupDragAndDrop() {
     });
 }
 
-// Функция обновления порядка задач после перетаскивания
-function updateTaskOrder(list) {
-    const isCompleted = list.id === 'completed-tasks-list';
-    const taskArray = isCompleted ? tasks.completed : tasks.active;
-    const newTaskArray = [];
+// Функция обновления порядка задач в БД
+async function updateTaskOrder(list) {
+    try {
+        const taskElements = list.querySelectorAll('.task:not(.completed-task)');
+        const orderData = [];
 
-    // Получаем новый порядок задач из DOM
-    const taskElements = list.querySelectorAll('.task');
+        taskElements.forEach((taskElement, index) => {
+            const taskId = taskElement.dataset.taskId;
+            if (taskId) {
+                orderData.push({
+                    taskId: taskId,
+                    order: index
+                });
+            }
+        });
 
-    // Создаем карту для быстрого поиска задач по их текущему индексу
-    const taskMap = {};
-    taskArray.forEach(task => {
-        taskMap[task.originalPosition] = task;
-    });
-
-    // Собираем задачи в новом порядке
-    taskElements.forEach((element, newIndex) => {
-        const originalIndex = parseInt(element.dataset.originalIndex);
-        const task = taskArray[originalIndex];
-
-        if (task) {
-            task.originalPosition = newIndex;
-            newTaskArray.push(task);
+        if (orderData.length > 0) {
+            await todoAPI.updateTaskOrder(orderData);
         }
-    });
-
-    // Обновляем массив задач
-    if (isCompleted) {
-        tasks.completed = newTaskArray;
-    } else {
-        tasks.active = newTaskArray;
+    } catch (error) {
+        console.error('Ошибка при обновлении порядка задач:', error);
     }
-
-    // Обновляем data-атрибуты в DOM
-    taskElements.forEach((element, index) => {
-        element.dataset.originalIndex = index;
-    });
-
-    saveTasks();
 }
 
 // Функция отрисовки задач с учетом фильтров

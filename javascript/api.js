@@ -136,6 +136,31 @@ class TodoAPI {
             body: JSON.stringify({ status: 'active' })
         });
     }
+
+    /**
+     * Обновляет порядок задач
+     * @param {Array<{taskId: string, order: number}>} orderData - Массив с новым порядком задач
+     * @returns {Promise<void>}
+     */
+    async updateTaskOrder(orderData) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/tasks/order`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({ orderData })
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка при обновлении порядка задач');
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении порядка задач:', error);
+            throw error;
+        }
+    }
 }
 
 // Создаем и экспортируем экземпляр API
