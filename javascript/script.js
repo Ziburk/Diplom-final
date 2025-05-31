@@ -161,6 +161,14 @@ const init = async () => {
                 else if (e.target.closest('.task-description-text')) {
                     initEditorForTask(taskElement);
                 }
+                // Кнопка сохранения описания
+                else if (e.target.closest('.save-description-btn')) {
+                    await saveTaskDescription(e);
+                }
+                // Кнопка отмены редактирования описания
+                else if (e.target.closest('.cancel-description-btn')) {
+                    cancelTaskDescriptionEditing(e);
+                }
             });
         });
 
@@ -448,32 +456,31 @@ function updateTaskOrder(list) {
 
 // Функция отрисовки задач с учетом фильтров
 function renderTasks() {
-
     // Получение списков задач
     const activeList = document.querySelector('#current-tasks-list');
     const completedList = document.querySelector('#completed-tasks-list');
 
-    //Обнуление размети этих списков
+    //Обнуление разметки этих списков
     activeList.innerHTML = '';
     completedList.innerHTML = '';
 
     // Отбор задач по критериям фильтрации
     const matchesFilters = (task, isCompleted) => {
-
         // Отбор по статусу (Активные/Завершенные)
         if (currentStatusFilter === 'active' && isCompleted) return false;
         if (currentStatusFilter === 'completed' && !isCompleted) return false;
 
         // Отбор по категориям
         if (currentCategoryFilter !== 'all') {
-            const taskCategory = task.category || defaultCategoryId;
+            const taskCategory = task.category_id || defaultCategoryId;
             if (taskCategory !== currentCategoryFilter) return false;
         }
 
         // Отбор по дате
         const dateFilter = document.getElementById('date-filter').value;
         if (dateFilter) {
-            if (dateFilter && task.dueDate !== dateFilter) return false;
+            const taskDate = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
+            if (!taskDate || taskDate !== dateFilter) return false;
         }
 
         return true;
@@ -1086,7 +1093,7 @@ function destroyEditor(editorId) {
 }
 
 // Функция изменения даты у задачи
-function changeTaskDate(event) {
+async function changeTaskDate(event) {
     const taskElement = event.target.closest('.task');
     if (!taskElement) return;
 
@@ -1116,28 +1123,27 @@ function changeTaskDate(event) {
 
     dateInput.focus();
 
-    const saveDate = () => {
-        const newDate = dateInput.value || null;
-        const taskIndex = parseInt(taskElement.dataset.originalIndex);
-        const isCompleted = taskElement.classList.contains('completed-task');
+    const saveDate = async () => {
+        try {
+            const taskId = taskElement.dataset.taskId;
+            const newDate = dateInput.value || null;
 
-        if (isCompleted) {
-            if (tasks.completed[taskIndex]) {
-                tasks.completed[taskIndex].dueDate = newDate;
-            }
-        } else {
-            if (tasks.active[taskIndex]) {
-                tasks.active[taskIndex].dueDate = newDate;
-            }
+            await todoAPI.updateTask(taskId, { due_date: newDate });
+            await loadTasks(); // Перезагружаем задачи для обновления UI
+
+            // Включаем перетаскивание обратно после сохранения
+            toggleTaskDraggable(taskElement, true);
+
+            document.removeEventListener('click', handleOutsideClick);
+        } catch (error) {
+            console.error('Ошибка при обновлении даты:', error);
+            // Возвращаем оригинальную дату в случае ошибки
+            const newSpan = document.createElement('span');
+            newSpan.className = 'task-due-date';
+            newSpan.textContent = originalDate;
+            dateInput.replaceWith(newSpan);
+            changeDateBtn.classList.remove('hidden');
         }
-
-        // Включаем перетаскивание обратно после сохранения
-        toggleTaskDraggable(taskElement, true);
-
-        saveTasks();
-        renderTasks();
-
-        document.removeEventListener('click', handleOutsideClick);
     };
 
     const cancelDateEdit = () => {
@@ -1199,12 +1205,12 @@ async function deleteTask(event) {
 
 // Функция отметки задачи как выполненной/невыполненной
 async function completeTask(event) {
-    const currentTask = event.target.closest('.task');
-    if (!currentTask) return;
+    const taskElement = event.target.closest('.task');
+    if (!taskElement) return;
 
     try {
-        const taskId = currentTask.dataset.taskId;
-        const isCompleted = currentTask.dataset.isCompleted === 'true';
+        const taskId = taskElement.dataset.taskId;
+        const isCompleted = taskElement.dataset.isCompleted === 'true';
 
         if (isCompleted) {
             await todoAPI.uncompleteTask(taskId);
@@ -1282,7 +1288,7 @@ function getDataByCategory(completed) {
 
     // Считаем задачи по категориям
     taskList.forEach(task => {
-        const categoryId = task.category || defaultCategoryId;
+        const categoryId = task.category_id || defaultCategoryId;
         categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
     });
 

@@ -121,15 +121,19 @@ class TodoAPI {
         });
     }
 
+    // Отметка задачи как выполненной
     async completeTask(taskId) {
-        return this.fetchAPI(`/tasks/${taskId}/complete`, {
-            method: 'PUT'
+        return this.fetchAPI(`/tasks/${taskId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'completed' })
         });
     }
 
+    // Отметка задачи как невыполненной
     async uncompleteTask(taskId) {
-        return this.fetchAPI(`/tasks/${taskId}/uncomplete`, {
-            method: 'PUT'
+        return this.fetchAPI(`/tasks/${taskId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'active' })
         });
     }
 }
