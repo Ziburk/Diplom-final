@@ -87,36 +87,38 @@ class Task {
                 paramCount++;
             }
 
-            // Формируем ORDER BY в зависимости от типа сортировки
-            let orderBy;
-            switch (sortType) {
-                case 'asc':
-                    orderBy = 't.due_date ASC NULLS LAST';
-                    break;
-                case 'desc':
-                    orderBy = 't.due_date DESC NULLS LAST';
-                    break;
-                case 'nearest':
-                    orderBy = `
-                        CASE 
-                            WHEN t.due_date IS NULL THEN 2
-                            ELSE 1
-                        END,
-                        ABS(EXTRACT(EPOCH FROM (t.due_date - CURRENT_TIMESTAMP))) ASC
-                    `;
-                    break;
-                case 'farthest':
-                    orderBy = `
-                        CASE 
-                            WHEN t.due_date IS NULL THEN 2
-                            ELSE 1
-                        END,
-                        ABS(EXTRACT(EPOCH FROM (t.due_date - CURRENT_TIMESTAMP))) DESC
-                    `;
-                    break;
-                default:
-                    orderBy = 't."order"';
-            }
+            // Формируем ORDER BY в зависимости от статуса задачи
+            let orderBy = `
+                CASE t.status
+                    WHEN 'completed' THEN 2
+                    ELSE 1
+                END,
+                CASE t.status
+                    WHEN 'completed' THEN t.completed_at
+                    ELSE NULL
+                END DESC NULLS LAST,
+                CASE t.status
+                    WHEN 'active' THEN
+                        CASE '${sortType}'
+                            WHEN 'asc' THEN t.due_date
+                            WHEN 'desc' THEN t.due_date
+                            ELSE NULL
+                        END
+                END ${sortType === 'desc' ? 'DESC' : 'ASC'} NULLS LAST,
+                CASE t.status
+                    WHEN 'active' THEN
+                        CASE '${sortType}'
+                            WHEN 'nearest' THEN EXTRACT(EPOCH FROM (t.due_date - CURRENT_TIMESTAMP))
+                            WHEN 'farthest' THEN EXTRACT(EPOCH FROM (t.due_date - CURRENT_TIMESTAMP))
+                            ELSE t."order"
+                        END
+                END ${sortType === 'farthest' ? 'DESC' : 'ASC'} NULLS LAST,
+                CASE 
+                    WHEN t.status = 'active' AND t.due_date IS NULL THEN 2
+                    WHEN t.status = 'active' THEN 1
+                    ELSE NULL
+                END
+            `;
 
             const query = `
                 SELECT 
