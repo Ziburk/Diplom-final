@@ -26,9 +26,13 @@
             <h1 class="header-title">To Do List by @Ziburk</h1>
         </div>
         <div class="profile-wrapper">
-            <!-- Временно скрываем Telegram виджет -->
-            <div id="user-profile">
-                <span>Тестовый пользователь</span>
+            <div id="telegram-login-container">
+                <!-- Здесь будет виджет входа через Telegram -->
+            </div>
+            <div id="user-profile" class="hidden">
+                <img id="user-avatar" src="img/profile.svg" alt="Profile" class="user-avatar">
+                <span id="user-name"></span>
+                <button id="logout-button" class="logout-button">Выйти</button>
             </div>
         </div>
     </header>

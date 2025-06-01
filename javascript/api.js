@@ -1,9 +1,16 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = window.location.origin + '/api';
 
 // Класс для работы с API
 class TodoAPI {
     constructor() {
         this.token = localStorage.getItem('auth_token');
+        
+        // Добавляем слушатель для обновления токена
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'auth_token') {
+                this.token = e.newValue;
+            }
+        });
     }
 
     // Метод для установки токена
@@ -14,10 +21,15 @@ class TodoAPI {
 
     // Базовый метод для выполнения запросов
     async fetchAPI(endpoint, options = {}) {
+        if (!this.token) {
+            window.location.href = '/login.html';
+            throw new Error('Не авторизован');
+        }
+
         const url = `${API_BASE_URL}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+            'Authorization': `Bearer ${this.token}`,
             ...options.headers
         };
 
@@ -29,11 +41,9 @@ class TodoAPI {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Если токен недействителен, пытаемся получить новый
-                    if (endpoint !== '/auth/test-token') {
-                        await this.login();
-                        return this.fetchAPI(endpoint, options);
-                    }
+                    // Если токен недействителен, перенаправляем на страницу входа
+                    window.location.href = '/login.html';
+                    throw new Error('Недействительный токен');
                 }
                 const error = await response.json();
                 throw new Error(error.error || 'API Error');
@@ -42,25 +52,6 @@ class TodoAPI {
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
-            throw error;
-        }
-    }
-
-    // Авторизация (временное решение без Telegram)
-    async login() {
-        try {
-            const response = await this.fetchAPI('/auth/test-token', {
-                method: 'POST'
-            });
-            
-            if (response.token) {
-                this.token = response.token;
-                localStorage.setItem('auth_token', response.token);
-            }
-            
-            return response;
-        } catch (error) {
-            console.error('Login error:', error);
             throw error;
         }
     }
@@ -143,23 +134,10 @@ class TodoAPI {
      * @returns {Promise<void>}
      */
     async updateTaskOrder(orderData) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/tasks/order`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: JSON.stringify({ orderData })
-            });
-
-            if (!response.ok) {
-                throw new Error('Ошибка при обновлении порядка задач');
-            }
-        } catch (error) {
-            console.error('Ошибка при обновлении порядка задач:', error);
-            throw error;
-        }
+        return this.fetchAPI('/tasks/order', {
+            method: 'PATCH',
+            body: JSON.stringify({ orderData })
+        });
     }
 
     /**
@@ -171,15 +149,11 @@ class TodoAPI {
      */
     async getProductivityData(params) {
         const queryParams = new URLSearchParams(params);
-        return this.fetchAPI(`/tasks/stats/productivity?${queryParams.toString()}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+        return this.fetchAPI(`/tasks/stats/productivity?${queryParams.toString()}`);
     }
 }
 
 // Создаем и экспортируем экземпляр API
 const todoAPI = new TodoAPI();
+window.todoAPI = todoAPI; // Делаем доступным глобально
 export default todoAPI; 

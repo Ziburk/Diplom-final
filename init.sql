@@ -1,4 +1,11 @@
--- Создание таблицы пользователей Telegram (основная таблица пользователей)
+-- Удаление существующих таблиц, если они есть
+DROP TABLE IF EXISTS notification_history CASCADE;
+DROP TABLE IF EXISTS notification_settings CASCADE;
+DROP TABLE IF EXISTS tasks CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS telegram_users CASCADE;
+
+-- Создание таблицы пользователей Telegram
 CREATE TABLE telegram_users (
     user_id SERIAL PRIMARY KEY,
     telegram_chat_id BIGINT NOT NULL UNIQUE,
@@ -11,12 +18,13 @@ CREATE TABLE telegram_users (
 
 -- Создание таблицы категорий
 CREATE TABLE categories (
-    category_id VARCHAR(50) PRIMARY KEY,
+    category_id VARCHAR(50),
     user_id INTEGER REFERENCES telegram_users(user_id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     color VARCHAR(7) NOT NULL,
     is_default BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (category_id, user_id),
     UNIQUE(user_id, name)
 );
 
@@ -24,14 +32,15 @@ CREATE TABLE categories (
 CREATE TABLE tasks (
     task_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES telegram_users(user_id) ON DELETE CASCADE,
-    category_id VARCHAR(50) REFERENCES categories(category_id) ON DELETE SET NULL,
+    category_id VARCHAR(50),
     title VARCHAR(100) NOT NULL,
     description TEXT,
     due_date TIMESTAMP WITH TIME ZONE,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
-    "order" INTEGER
+    "order" INTEGER,
+    FOREIGN KEY (category_id, user_id) REFERENCES categories(category_id, user_id) ON DELETE SET NULL
 );
 
 -- Создание таблицы настроек уведомлений
@@ -58,6 +67,7 @@ CREATE TABLE notification_history (
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_category_id ON tasks(category_id);
 CREATE INDEX idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_notification_settings_user_id ON notification_settings(user_id);
 CREATE INDEX idx_telegram_users_chat_id ON telegram_users(telegram_chat_id);
 CREATE INDEX idx_categories_user_id ON categories(user_id);

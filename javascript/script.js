@@ -83,8 +83,29 @@ const EXPORT_PRODUCTIVITY_TYPES = {
 // Главная функция всей программы. Инициализация компонентов и присваивание событий
 const init = async () => {
     try {
-        // Пытаемся авторизоваться
-        await todoAPI.login();
+        // Проверяем авторизацию
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        // Проверяем валидность токена
+        try {
+            const response = await fetch('/api/auth/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Токен недействителен');
+            }
+        } catch (error) {
+            console.error('Ошибка проверки токена:', error);
+            window.location.href = '/login.html';
+            return;
+        }
         
         // Загружаем данные
         await loadCategories();
@@ -197,6 +218,7 @@ const init = async () => {
 
     } catch (error) {
         console.error('Ошибка инициализации:', error);
+        window.location.href = '/login.html';
     }
 };
 
