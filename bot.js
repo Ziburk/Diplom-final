@@ -1,11 +1,12 @@
 const { Telegraf, Markup } = require('telegraf');
-const fs = require('fs');
+const config = require('./src/config/config');
+const db = require('./src/bot/db');
 
 // Добавляем поддержку сессий
 const { session } = require('telegraf');
 
-// Инициализация бота с токеном (замените на свой токен)
-const bot = new Telegraf('8149852561:AAGnlLUr0ba-1C2WYnM1gKmba_0n-vqtNNM');
+// Инициализация бота с токеном
+const bot = new Telegraf(config.telegramToken);
 
 // Подключаем middleware для работы с сессиями
 bot.use(session());
@@ -46,27 +47,6 @@ function initializeUserData(userId) {
         };
     }
     return users[userId];
-}
-
-// Загрузка данных при запуске бота
-function loadData() {
-    try {
-        if (fs.existsSync('users.json')) {
-            users = JSON.parse(fs.readFileSync('users.json'));
-        }
-    } catch (error) {
-        console.error('Ошибка при загрузке данных:', error);
-        users = {};
-    }
-}
-
-// Сохранение данных
-function saveData() {
-    try {
-        fs.writeFileSync('users.json', JSON.stringify(users));
-    } catch (error) {
-        console.error('Ошибка при сохранении данных:', error);
-    }
 }
 
 // Форматирование даты
@@ -148,21 +128,37 @@ function createCalendarKeyboard(selectedDate = null) {
 }
 
 // Команда /start
-bot.command('start', (ctx) => {
-    ctx.reply(
-        'Добро пожаловать в ToDo List бот!\n\n' +
-        'Доступные команды:\n' +
-        '/add - Добавить новую задачу\n' +
-        '/list - Показать список задач\n' +
-        '/categories - Управление категориями\n' +
-        '/stats - Показать статистику\n' +
-        '/help - Показать справку',
-        Markup.keyboard([
-            ['📝 Добавить задачу', '📋 Список задач'],
-            ['🏷 Категории', '📊 Статистика'],
-            ['❓ Помощь']
-        ]).resize()
-    );
+bot.command('start', async (ctx) => {
+    try {
+        // Получаем или создаем пользователя
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        // Создаем стандартные категории для нового пользователя
+        await db.createDefaultCategories(user.user_id);
+
+        ctx.reply(
+            'Добро пожаловать в ToDo List бот!\n\n' +
+            'Доступные команды:\n' +
+            '/add - Добавить новую задачу\n' +
+            '/list - Показать список задач\n' +
+            '/categories - Управление категориями\n' +
+            '/stats - Показать статистику\n' +
+            '/help - Показать справку',
+            Markup.keyboard([
+                ['📝 Добавить задачу', '📋 Список задач'],
+                ['🏷 Категории', '📊 Статистика'],
+                ['❓ Помощь']
+            ]).resize()
+        );
+    } catch (error) {
+        console.error('Ошибка при выполнении команды /start:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
 });
 
 // Команда /help
@@ -196,372 +192,506 @@ bot.hears('❓ Помощь', (ctx) => {
 });
 
 // Функция добавления новой задачи
-function startAddingTask(ctx) {
-    const userId = ctx.from.id;
-    initializeUserData(userId);
+async function startAddingTask(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    ctx.reply('Введите название задачи:');
-    ctx.session = {
-        state: 'waiting_task_name',
-        userId: userId
-    };
+        const categories = await db.getUserCategories(user.user_id);
+        
+        ctx.reply('Введите название задачи:');
+        ctx.session = {
+            state: 'waiting_task_name',
+            userId: user.user_id
+        };
+    } catch (error) {
+        console.error('Ошибка при начале добавления задачи:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
 }
 
 // Функция отображения списка задач
-function showTasksList(ctx) {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+async function showTasksList(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    const activeTasksList = userData.tasks.active.map((task, index) => {
-        const category = userData.categories[task.category] || userData.categories.other;
-        return `${index + 1}. ${task.title}\n` +
-            `📅 ${formatDate(task.dueDate)}\n` +
-            `🏷 ${category.name}\n`;
-    }).join('\n');
+        const tasks = await db.getUserTasks(user.user_id);
 
-    const completedTasksList = userData.tasks.completed.map((task, index) => {
-        const category = userData.categories[task.category] || userData.categories.other;
-        return `${index + 1}. ✅ ${task.title}\n` +
-            `📅 ${formatDate(task.dueDate)}\n` +
-            `🏷 ${category.name}\n`;
-    }).join('\n');
+        const activeTasksList = tasks.active.map((task, index) => {
+            return `${index + 1}. ${task.title}\n` +
+                `📅 ${formatDate(task.due_date)}\n` +
+                `🏷 ${task.category_name || 'Без категории'}\n`;
+        }).join('\n');
 
-    const message =
-        '📋 Активные задачи:\n\n' +
-        (activeTasksList || 'Нет активных задач') +
-        '\n\n✅ Выполненные задачи:\n\n' +
-        (completedTasksList || 'Нет выполненных задач');
+        const completedTasksList = tasks.completed.map((task, index) => {
+            return `${index + 1}. ✅ ${task.title}\n` +
+                `📅 ${formatDate(task.due_date)}\n` +
+                `🏷 ${task.category_name || 'Без категории'}\n`;
+        }).join('\n');
 
-    ctx.reply(message, Markup.inlineKeyboard([
-        [Markup.button.callback('Отметить выполненной', 'complete_task'),
-        Markup.button.callback('Изменить дату', 'change_date')],
-        [Markup.button.callback('Изменить категорию', 'change_category'),
-        Markup.button.callback('Удалить', 'delete_task')]
-    ]));
+        const message =
+            '📋 Активные задачи:\n\n' +
+            (activeTasksList || 'Нет активных задач') +
+            '\n\n✅ Выполненные задачи:\n\n' +
+            (completedTasksList || 'Нет выполненных задач');
+
+        ctx.reply(message, Markup.inlineKeyboard([
+            [Markup.button.callback('Изменить статус', 'change_status')],
+            [Markup.button.callback('Изменить дату', 'change_date'),
+            Markup.button.callback('Изменить категорию', 'change_category')],
+            [Markup.button.callback('Удалить', 'delete_task')]
+        ]));
+    } catch (error) {
+        console.error('Ошибка при отображении списка задач:', error);
+        ctx.reply('Произошла ошибка при загрузке задач. Пожалуйста, попробуйте позже.');
+    }
 }
 
 // Функция отображения категорий
-function showCategories(ctx) {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+async function showCategories(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    const categoriesList = Object.values(userData.categories).map(cat =>
-        `🏷 ${cat.name}`
-    ).join('\n');
+        const categories = await db.getUserCategories(user.user_id);
+        const categoriesList = categories.map(cat =>
+            `🏷 ${cat.name}`
+        ).join('\n');
 
-    ctx.reply(
-        '🏷 Категории:\n\n' + categoriesList,
-        Markup.inlineKeyboard([
-            [Markup.button.callback('Добавить категорию', 'add_category')],
-            [Markup.button.callback('Показать задачи по категории', 'show_by_category')]
-        ])
-    );
+        ctx.reply(
+            '🏷 Категории:\n\n' + categoriesList,
+            Markup.inlineKeyboard([
+                [Markup.button.callback('Добавить категорию', 'add_category')],
+                [Markup.button.callback('Показать задачи по категории', 'show_by_category')]
+            ])
+        );
+    } catch (error) {
+        console.error('Ошибка при отображении категорий:', error);
+        ctx.reply('Произошла ошибка при загрузке категорий. Пожалуйста, попробуйте позже.');
+    }
 }
 
 // Функция отображения статистики
-function showStats(ctx) {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+async function showStats(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    const totalTasks = userData.tasks.active.length + userData.tasks.completed.length;
-    const activeTasksCount = userData.tasks.active.length;
-    const completedTasksCount = userData.tasks.completed.length;
+        const tasks = await db.getUserTasks(user.user_id);
+        const totalTasks = tasks.active.length + tasks.completed.length;
+        const activeTasksCount = tasks.active.length;
+        const completedTasksCount = tasks.completed.length;
 
-    const completionRate = totalTasks > 0
-        ? Math.round((completedTasksCount / totalTasks) * 100)
-        : 0;
+        const completionRate = totalTasks > 0
+            ? Math.round((completedTasksCount / totalTasks) * 100)
+            : 0;
 
-    ctx.reply(
-        '📊 Статистика задач:\n\n' +
-        `Всего задач: ${totalTasks}\n` +
-        `Активных: ${activeTasksCount}\n` +
-        `Выполненных: ${completedTasksCount}\n` +
-        `Процент выполнения: ${completionRate}%`
-    );
+        const message = 
+            '📊 Статистика:\n\n' +
+            `Всего задач: ${totalTasks}\n` +
+            `Активных: ${activeTasksCount}\n` +
+            `Выполненных: ${completedTasksCount}\n` +
+            `Процент выполнения: ${completionRate}%`;
+
+        ctx.reply(message);
+    } catch (error) {
+        console.error('Ошибка при отображении статистики:', error);
+        ctx.reply('Произошла ошибка при загрузке статистики. Пожалуйста, попробуйте позже.');
+    }
 }
 
-// Объединяем все обработчики текстовых сообщений в один
+// Обработчики текстовых сообщений
 bot.on('text', async (ctx) => {
     if (!ctx.session) return;
 
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    switch (ctx.session.state) {
-        case 'waiting_task_name':
-            ctx.session.newTask = {
-                title: ctx.message.text,
-                userId: userId
-            };
-            const categoryButtons = Object.values(userData.categories).map(cat => [
-                Markup.button.callback(cat.name, `select_category:${cat.id}`)
-            ]);
-            await ctx.reply('Выберите категорию:', Markup.inlineKeyboard(categoryButtons));
-            ctx.session.state = 'waiting_category';
-            break;
-
-        case 'waiting_date':
-            // Проверяем формат даты (ДД.ММ.ГГГГ)
-            const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
-            const match = ctx.message.text.match(dateRegex);
-
-            if (match) {
-                const [_, day, month, year] = match;
-                const date = new Date(year, month - 1, day);
-                ctx.session.newTask.dueDate = date.toISOString();
-
-                // Добавляем задачу
-                userData.tasks.active.unshift({
-                    ...ctx.session.newTask,
-                    originalPosition: userData.tasks.active.length
-                });
-
-                saveData();
-                await ctx.reply('Задача успешно добавлена! 👍');
-                delete ctx.session;
-            } else {
-                await ctx.reply('Неверный формат даты. Пожалуйста, используйте формат ДД.ММ.ГГГГ');
-            }
-            break;
-
-        case 'waiting_complete_number':
-            const completeIndex = parseInt(ctx.message.text) - 1;
-            if (completeIndex >= 0 && completeIndex < userData.tasks.active.length) {
-                const task = userData.tasks.active[completeIndex];
-                task.lastStatusChange = new Date().toISOString();
-                userData.tasks.completed.unshift(task);
-                userData.tasks.active.splice(completeIndex, 1);
-                saveData();
-                await ctx.reply('Задача отмечена как выполненная! ✅');
-                showTasksList(ctx); // Показываем обновленный список
-            } else {
-                await ctx.reply('Неверный номер задачи.');
-            }
-            delete ctx.session;
-            break;
-
-        case 'waiting_change_date':
-            const [taskNum, newDate] = ctx.message.text.split(' ');
-            const dateRegexChange = /^(\d{2})\.(\d{2})\.(\d{4})$/;
-            const matchChange = newDate?.match(dateRegexChange);
-
-            if (matchChange) {
-                const [_, day, month, year] = matchChange;
-                const taskIndex = parseInt(taskNum) - 1;
-
-                if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
-                    const date = new Date(year, month - 1, day);
-                    userData.tasks.active[taskIndex].dueDate = date.toISOString();
-                    saveData();
-                    await ctx.reply('Дата задачи успешно изменена! 📅');
-                    showTasksList(ctx); // Показываем обновленный список
-                } else {
-                    await ctx.reply('Неверный номер задачи.');
-                }
-            } else {
-                await ctx.reply('Неверный формат даты. Используйте ДД.ММ.ГГГГ');
-            }
-            delete ctx.session;
-            break;
-
-        case 'waiting_delete_number':
-            const deleteIndex = parseInt(ctx.message.text) - 1;
-            if (deleteIndex >= 0 && deleteIndex < userData.tasks.active.length) {
-                userData.tasks.active.splice(deleteIndex, 1);
-                saveData();
-                await ctx.reply('Задача удалена! 🗑');
-                showTasksList(ctx); // Показываем обновленный список
-            } else {
-                await ctx.reply('Неверный номер задачи.');
-            }
-            delete ctx.session;
-            break;
-
-        case 'waiting_change_category_number':
-            const changeCatIndex = parseInt(ctx.message.text) - 1;
-            if (changeCatIndex >= 0 && changeCatIndex < userData.tasks.active.length) {
-                ctx.session.taskToChange = changeCatIndex;
-                const categoryButtons = Object.values(userData.categories).map(cat => [
-                    Markup.button.callback(cat.name, `change_task_category:${cat.id}`)
+        switch (ctx.session.state) {
+            case 'waiting_task_name':
+                ctx.session.newTask = {
+                    title: ctx.message.text,
+                    userId: user.user_id
+                };
+                const categories = await db.getUserCategories(user.user_id);
+                const categoryButtons = categories.map(cat => [
+                    Markup.button.callback(cat.name, `select_category:${cat.category_id}`)
                 ]);
-                await ctx.reply('Выберите новую категорию:',
-                    Markup.inlineKeyboard(categoryButtons)
-                );
-                ctx.session.state = 'waiting_new_category';
-            } else {
-                await ctx.reply('Неверный номер задачи.');
+                await ctx.reply('Выберите категорию:', Markup.inlineKeyboard(categoryButtons));
+                ctx.session.state = 'waiting_category';
+                break;
+
+            case 'waiting_category_name':
+                const categoryName = ctx.message.text.trim();
+
+                // Проверяем, нет ли уже категории с таким именем
+                const existingCategories = await db.getUserCategories(user.user_id);
+                const exists = existingCategories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
+                
+                if (exists) {
+                    await ctx.reply('Категория с таким названием уже существует. Пожалуйста, выберите другое название.');
+                    return;
+                }
+
+                // Список стандартных цветов для новых категорий
+                const colorPalette = [
+                    '#FF5252', '#FFD740', '#69F0AE', '#448AFF', '#B388FF',
+                    '#FF80AB', '#7C4DFF', '#64FFDA', '#FF8A80', '#EA80FC',
+                    '#8C9EFF', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D'
+                ];
+
+                const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+                
+                try {
+                    // Создаем новую категорию в базе данных
+                    await db.createCategory(user.user_id, categoryName, randomColor);
+                    await ctx.reply(`Категория "${categoryName}" успешно создана! 🎨`);
+                    
+                    // Показываем обновленный список категорий
+                    showCategories(ctx);
+                } catch (error) {
+                    console.error('Ошибка при создании категории:', error);
+                    await ctx.reply('Произошла ошибка при создании категории. Пожалуйста, попробуйте позже.');
+                }
+                
                 delete ctx.session;
-            }
-            break;
+                break;
 
-        case 'waiting_category_name':
-            const categoryName = ctx.message.text.trim();
+            case 'waiting_date':
+                const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+                const match = ctx.message.text.match(dateRegex);
 
-            if (categoryName === userData.categories.other.name) {
-                await ctx.reply('Это название зарезервировано. Пожалуйста, выберите другое.');
-                return;
-            }
+                if (match) {
+                    const [_, day, month, year] = match;
+                    const date = new Date(year, month - 1, day);
+                    
+                    const task = await db.createTask(
+                        ctx.session.newTask.userId,
+                        ctx.session.newTask.title,
+                        ctx.session.newTask.category,
+                        date.toISOString()
+                    );
 
-            // Проверяем, нет ли уже категории с таким именем
-            const exists = Object.values(userData.categories).some(cat => cat.name === categoryName);
-            if (exists) {
-                await ctx.reply('Категория с таким названием уже существует. Пожалуйста, выберите другое название.');
-                return;
-            }
+                    await ctx.reply('Задача успешно добавлена! 👍');
+                    delete ctx.session;
+                } else {
+                    await ctx.reply('Неверный формат даты. Пожалуйста, используйте формат ДД.ММ.ГГГГ');
+                }
+                break;
 
-            // Список стандартных цветов для новых категорий
-            const colorPalette = [
-                '#FF5252', '#FFD740', '#69F0AE', '#448AFF', '#B388FF',
-                '#FF80AB', '#7C4DFF', '#64FFDA', '#FF8A80', '#EA80FC',
-                '#8C9EFF', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D'
-            ];
-
-            const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-            const newId = generateCategoryId();
-
-            // Создаем новую категорию
-            userData.categories[newId] = {
-                id: newId,
-                name: categoryName,
-                color: randomColor
-            };
-
-            saveData();
-            await ctx.reply(`Категория "${categoryName}" успешно создана! 🎨`);
-            delete ctx.session;
-
-            // Показываем обновленный список категорий
-            showCategories(ctx);
-            break;
-
-        case 'waiting_change_date_number':
-            const taskIndex = parseInt(ctx.message.text) - 1;
-            if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
-                ctx.session.taskToChange = taskIndex;
-                await ctx.reply(
-                    'Выберите новую дату:',
-                    Markup.inlineKeyboard(createCalendarKeyboard())
-                );
-                ctx.session.state = 'waiting_new_date';
-            } else {
-                await ctx.reply('Неверный номер задачи.');
-                delete ctx.session;
-            }
-            break;
+            case 'waiting_change_status_number':
+                try {
+                    const taskIndex = parseInt(ctx.message.text) - 1;
+                    if (taskIndex >= 0 && taskIndex < ctx.session.tasks.length) {
+                        const task = ctx.session.tasks[taskIndex];
+                        if (ctx.session.taskType === 'active') {
+                            await db.completeTask(task.task_id, user.user_id);
+                            await ctx.reply('Задача отмечена как выполненная! ✅');
+                        } else {
+                            await db.uncompleteTask(task.task_id, user.user_id);
+                            await ctx.reply('Задача отмечена как активная! ↩️');
+                        }
+                        await showTasksList(ctx);
+                    } else {
+                        await ctx.reply('Неверный номер задачи.');
+                    }
+                    delete ctx.session;
+                } catch (error) {
+                    console.error('Ошибка при изменении статуса задачи:', error);
+                    ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+                }
+                break;
+        }
+    } catch (error) {
+        console.error('Ошибка при обработке текстового сообщения:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
     }
 });
 
 // Обработчики inline кнопок
 bot.action(/select_category:(.+)/, async (ctx) => {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
-
-    if (ctx.session?.state === 'waiting_category') {
-        ctx.session.newTask.category = ctx.match[1];
-        await ctx.reply(
-            'Выберите дату выполнения:',
-            Markup.inlineKeyboard(createCalendarKeyboard())
-        );
-        ctx.session.state = 'waiting_date';
+    try {
+        if (ctx.session?.state === 'waiting_category') {
+            ctx.session.newTask.category = ctx.match[1];
+            await ctx.reply(
+                'Выберите дату выполнения:',
+                Markup.inlineKeyboard(createCalendarKeyboard())
+            );
+            ctx.session.state = 'waiting_date';
+        }
+        await ctx.answerCbQuery();
+    } catch (error) {
+        console.error('Ошибка при выборе категории:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
     }
+});
 
+// Функция для выбора типа задач
+async function askTaskType(ctx, action) {
+    const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('Активные задачи', `select_type:active:${action}`)],
+        [Markup.button.callback('Выполненные задачи', `select_type:completed:${action}`)]
+    ]);
+    
+    const messages = {
+        'delete': 'Выберите тип задач для удаления:',
+        'change_date': 'Выберите тип задач для изменения даты:',
+        'change_category': 'Выберите тип задач для изменения категории:',
+        'change_status': 'Выберите задачи для изменения статуса:'
+    };
+    
+    await ctx.reply(messages[action], keyboard);
+}
+
+// Обработчик выбора типа задач
+bot.action(/select_type:(\w+):(\w+)/, async (ctx) => {
+    try {
+        const [_, type, action] = ctx.match;
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const tasks = await db.getUserTasks(user.user_id);
+        const tasksList = tasks[type].map((task, index) =>
+            `${index + 1}. ${task.title}`
+        ).join('\n');
+
+        const actionMessages = {
+            'delete': 'удаления',
+            'change_date': 'изменения даты',
+            'change_category': 'изменения категории',
+            'change_status': type === 'active' ? 'отметки как выполненной' : 'отметки как активной'
+        };
+
+        await ctx.reply(
+            `Выберите задачу для ${actionMessages[action]}:\n\n` +
+            (tasksList || 'Нет задач') + '\n\n' +
+            'Введите номер задачи:'
+        );
+        
+        ctx.session = { 
+            state: `waiting_${action}_number`,
+            tasks: tasks[type],
+            taskType: type
+        };
+    } catch (error) {
+        console.error('Ошибка при выборе типа задач:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
     await ctx.answerCbQuery();
 });
 
-// Обработчик кнопки "Отметить выполненной"
-bot.action('complete_task', async (ctx) => {
-    await ctx.reply('Введите номер задачи для отметки как выполненной:');
-    ctx.session = { state: 'waiting_complete_number' };
+// Обработчик кнопки "Изменить статус"
+bot.action('change_status', async (ctx) => {
+    await askTaskType(ctx, 'change_status');
     await ctx.answerCbQuery();
 });
 
 // Обработчик кнопки "Изменить дату"
 bot.action('change_date', async (ctx) => {
-    await ctx.reply('Введите номер задачи:');
-    ctx.session = { state: 'waiting_change_date_number' };
+    await askTaskType(ctx, 'change_date');
     await ctx.answerCbQuery();
 });
 
 // Обработчик кнопки "Изменить категорию"
 bot.action('change_category', async (ctx) => {
-    await ctx.reply('Введите номер задачи:');
-    ctx.session = { state: 'waiting_change_category_number' };
+    await askTaskType(ctx, 'change_category');
     await ctx.answerCbQuery();
 });
 
 // Обработчик кнопки "Удалить"
 bot.action('delete_task', async (ctx) => {
-    await ctx.reply('Введите номер задачи для удаления:');
-    ctx.session = { state: 'waiting_delete_number' };
+    await askTaskType(ctx, 'delete');
     await ctx.answerCbQuery();
 });
 
 // Обработчик кнопки "Показать задачи по категории"
 bot.action('show_by_category', async (ctx) => {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    const categoryButtons = Object.values(userData.categories).map(cat => [
-        Markup.button.callback(`Показать ${cat.name}`, `show_category:${cat.id}`)
-    ]);
-    await ctx.reply('Выберите категорию для просмотра задач:',
-        Markup.inlineKeyboard(categoryButtons)
-    );
+        const categories = await db.getUserCategories(user.user_id);
+        const categoryButtons = categories.map(cat => [
+            Markup.button.callback(`${cat.name}`, `show_category:${cat.category_id}`)
+        ]);
+
+        await ctx.reply('Выберите категорию для просмотра задач:',
+            Markup.inlineKeyboard(categoryButtons)
+        );
+    } catch (error) {
+        console.error('Ошибка при подготовке списка категорий:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
     await ctx.answerCbQuery();
 });
 
 // Обработчик выбора категории для просмотра
 bot.action(/show_category:(.+)/, async (ctx) => {
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-    const categoryId = ctx.match[1];
-    const category = userData.categories[categoryId];
+        const categoryId = ctx.match[1];
+        const categories = await db.getUserCategories(user.user_id);
+        const category = categories.find(c => c.category_id === categoryId);
+        
+        if (!category) {
+            await ctx.reply('Категория не найдена');
+            await ctx.answerCbQuery();
+            return;
+        }
 
-    const activeTasks = userData.tasks.active
-        .filter(task => task.category === categoryId)
-        .map((task, index) =>
-            `${index + 1}. ${task.title}\n📅 ${formatDate(task.dueDate)}`
-        ).join('\n');
+        const tasks = await db.getUserTasks(user.user_id);
+        
+        const activeTasks = tasks.active
+            .filter(task => task.category_id === categoryId)
+            .map((task, index) =>
+                `${index + 1}. ${task.title}\n📅 ${formatDate(task.due_date)}`
+            ).join('\n');
 
-    const completedTasks = userData.tasks.completed
-        .filter(task => task.category === categoryId)
-        .map((task, index) =>
-            `${index + 1}. ✅ ${task.title}\n📅 ${formatDate(task.dueDate)}`
-        ).join('\n');
+        const completedTasks = tasks.completed
+            .filter(task => task.category_id === categoryId)
+            .map((task, index) =>
+                `${index + 1}. ✅ ${task.title}\n📅 ${formatDate(task.due_date)}`
+            ).join('\n');
 
-    const message =
-        `🏷 Задачи в категории "${category.name}":\n\n` +
-        '📋 Активные задачи:\n' +
-        (activeTasks || 'Нет активных задач') +
-        '\n\n✅ Выполненные задачи:\n' +
-        (completedTasks || 'Нет выполненных задач');
+        const message =
+            `🏷 Задачи в категории "${category.name}":\n\n` +
+            '📋 Активные задачи:\n' +
+            (activeTasks || 'Нет активных задач') +
+            '\n\n✅ Выполненные задачи:\n' +
+            (completedTasks || 'Нет выполненных задач');
 
-    await ctx.reply(message);
+        await ctx.reply(message);
+    } catch (error) {
+        console.error('Ошибка при отображении задач категории:', error);
+        ctx.reply('Произошла ошибка при загрузке задач. Пожалуйста, попробуйте позже.');
+    }
     await ctx.answerCbQuery();
 });
 
-// Обработчик выбора новой категории для задачи
-bot.action(/change_task_category:(.+)/, async (ctx) => {
-    if (ctx.session?.state === 'waiting_new_category' &&
-        typeof ctx.session.taskToChange === 'number') {
+// Обработчик выбора даты
+bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
+    try {
+        if (!ctx.session) return;
 
-        const userId = ctx.from.id;
-        const userData = initializeUserData(userId);
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
 
-        const categoryId = ctx.match[1];
-        const taskIndex = ctx.session.taskToChange;
+        if (ctx.session.state === 'waiting_date') {
+            // Логика создания новой задачи
+            const match = ctx.match[1];
+            let dueDate = null;
 
-        if (taskIndex >= 0 && taskIndex < userData.tasks.active.length) {
-            userData.tasks.active[taskIndex].category = categoryId;
-            saveData();
-            await ctx.reply('Категория задачи успешно изменена! 🏷');
-        } else {
-            await ctx.reply('Произошла ошибка при изменении категории.');
+            if (match !== 'no_date') {
+                const [year, month, day] = match.split(':').map(Number);
+                const date = new Date(year, month, day);
+                date.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                dueDate = date.toISOString();
+            }
+
+            const task = await db.createTask(
+                ctx.session.newTask.userId,
+                ctx.session.newTask.title,
+                ctx.session.newTask.category,
+                dueDate
+            );
+
+            const categories = await db.getUserCategories(ctx.session.newTask.userId);
+            const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+            await ctx.editMessageText(
+                'Задача успешно добавлена! 👍\n' +
+                `Название: ${task.title}\n` +
+                `Категория: ${category ? category.name : 'Без категории'}\n` +
+                `Дата: ${formatDate(task.due_date)}`
+            );
+        } else if (ctx.session.state === 'waiting_new_date' && ctx.session.taskToChange) {
+            // Логика изменения даты существующей задачи
+            const match = ctx.match[1];
+            let dueDate = null;
+
+            if (match !== 'no_date') {
+                const [year, month, day] = match.split(':').map(Number);
+                const date = new Date(year, month, day);
+                date.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                dueDate = date.toISOString();
+            }
+
+            await db.updateTaskDate(ctx.session.taskToChange, user.user_id, dueDate);
+            await ctx.editMessageText('Дата задачи успешно изменена! 📅');
+            await showTasksList(ctx);
         }
-    }
 
-    delete ctx.session;
+        delete ctx.session;
+    } catch (error) {
+        console.error('Ошибка при обработке даты:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+    await ctx.answerCbQuery();
+});
+
+// Обработчик изменения категории задачи
+bot.action(/change_task_category:(\d+):(.+)/, async (ctx) => {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const [_, taskId, categoryId] = ctx.match;
+        
+        // Обновляем категорию задачи в базе данных
+        await db.updateTaskCategory(parseInt(taskId), categoryId, user.user_id);
+        
+        await ctx.reply('Категория задачи успешно изменена! 🏷');
+        
+        // Показываем обновленный список задач
+        await showTasksList(ctx);
+    } catch (error) {
+        console.error('Ошибка при изменении категории задачи:', error);
+        ctx.reply('Произошла ошибка при изменении категории. Пожалуйста, попробуйте позже.');
+    }
     await ctx.answerCbQuery();
 });
 
@@ -592,42 +722,6 @@ bot.action(/calendar:(\d+):(-?\d+)/, async (ctx) => {
     await ctx.answerCbQuery();
 });
 
-// Обработчик выбора даты
-bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
-    if (ctx.session?.state !== 'waiting_date') {
-        await ctx.answerCbQuery();
-        return;
-    }
-
-    const match = ctx.match[1];
-    if (match === 'no_date') {
-        ctx.session.newTask.dueDate = null;
-    } else {
-        const [year, month, day] = match.split(':').map(Number);
-        const date = new Date(year, month, day);
-        ctx.session.newTask.dueDate = date.toISOString();
-    }
-
-    // Добавляем задачу
-    const userId = ctx.from.id;
-    const userData = initializeUserData(userId);
-    userData.tasks.active.unshift({
-        ...ctx.session.newTask,
-        originalPosition: userData.tasks.active.length
-    });
-
-    saveData();
-    await ctx.editMessageText(
-        'Задача успешно добавлена! 👍\n' +
-        `Название: ${ctx.session.newTask.title}\n` +
-        `Категория: ${userData.categories[ctx.session.newTask.category].name}\n` +
-        `Дата: ${formatDate(ctx.session.newTask.dueDate)}`
-    );
-
-    delete ctx.session;
-    await ctx.answerCbQuery();
-});
-
 // Обработчик игнорируемых кнопок календаря
 bot.action('ignore', (ctx) => ctx.answerCbQuery());
 
@@ -650,7 +744,6 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
                 userData.tasks.active[taskIndex].dueDate = date.toISOString();
             }
 
-            saveData();
             await ctx.editMessageText(
                 'Дата задачи успешно изменена! 📅\n' +
                 `Новая дата: ${formatDate(userData.tasks.active[taskIndex].dueDate)}`
@@ -669,9 +762,6 @@ function generateCategoryId() {
     const randomPart = Math.random().toString(36).substr(2, 4);
     return `cat_${timestamp}_${randomPart}`;
 }
-
-// Загружаем данные при запуске
-loadData();
 
 // Запускаем бота
 bot.launch().then(() => {
