@@ -59134,31 +59134,41 @@ function renderTasks() {
     // Отбор по дате
     var dateFilter = document.getElementById('date-filter').value;
     if (dateFilter) {
-      var taskDate = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
-      if (!taskDate || taskDate !== dateFilter) return false;
+      if (!task.due_date) return false;
+
+      // Преобразуем дату фильтра в объект Date
+      var filterDate = new Date(dateFilter);
+      filterDate.setHours(0, 0, 0, 0);
+
+      // Преобразуем дату задачи в объект Date в локальном часовом поясе
+      var taskDate = new Date(task.due_date);
+      taskDate.setHours(0, 0, 0, 0);
+
+      // Сравниваем даты, игнорируя время
+      if (taskDate.getTime() !== filterDate.getTime()) return false;
     }
     return true;
   };
 
   // Сортируем каждый из списков
-  var activeTasks = sortTasksByDate(tasks.active.filter(function (task) {
+  var activeTasks = sortTasksByDate(_toConsumableArray(tasks.active).filter(function (task) {
     return matchesFilters(task, false);
   }));
-  var completedTasks = sortTasksByDate(tasks.completed.filter(function (task) {
+  var completedTasks = sortTasksByDate(_toConsumableArray(tasks.completed).filter(function (task) {
     return matchesFilters(task, true);
   }));
 
   // Рендерим с сохранением оригинальных индексов
   activeTasks.forEach(function (task) {
     var originalIndex = tasks.active.findIndex(function (t) {
-      return t === task;
+      return t.task_id === task.task_id;
     });
     var taskElement = createTaskElement(task, originalIndex, false);
     activeList.appendChild(taskElement);
   });
   completedTasks.forEach(function (task) {
     var originalIndex = tasks.completed.findIndex(function (t) {
-      return t === task;
+      return t.task_id === task.task_id;
     });
     var taskElement = createTaskElement(task, originalIndex, true);
     completedList.appendChild(taskElement);
@@ -59514,7 +59524,7 @@ function _addTask() {
           });
           newTitle.addEventListener('blur', /*#__PURE__*/function () {
             var _ref8 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(e) {
-              var selectCat, dueDateInput, taskData, _t10;
+              var selectCat, dueDateInput, dueDate, localDate, taskData, _t10;
               return _regenerator().w(function (_context11) {
                 while (1) switch (_context11.n) {
                   case 0:
@@ -59532,11 +59542,18 @@ function _addTask() {
                       break;
                     }
                     _context11.p = 2;
+                    dueDate = null;
+                    if (dueDateInput.value) {
+                      // Создаем дату в локальном часовом поясе
+                      localDate = new Date(dueDateInput.value);
+                      localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                      dueDate = localDate.toISOString(); // Преобразуем в ISO формат
+                    }
                     taskData = {
                       title: newTitle.value,
                       description: '',
                       category_id: selectCat.value,
-                      due_date: dueDateInput.value || null
+                      due_date: dueDate
                     };
                     _context11.n = 3;
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].createTask(taskData);
@@ -59722,18 +59739,18 @@ function sortTasksByDate(tasksArray) {
 
     // Для сортировки по близости к текущей дате
     if (sortType === 'nearest' || sortType === 'farthest') {
-      var aDiff = Math.abs(aDate - today);
-      var bDiff = Math.abs(bDate - today);
+      var aDiff = Math.abs(aDate.getTime() - today.getTime());
+      var bDiff = Math.abs(bDate.getTime() - today.getTime());
       return sortType === 'nearest' ? aDiff - bDiff : bDiff - aDiff;
     }
     // Для простой сортировки по дате
     else {
-      return sortType === 'asc' ? aDate - bDate : bDate - aDate;
+      return sortType === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
     }
   });
 
   // Возвращаем отсортированные задачи с датой + задачи без даты
-  return [].concat(_toConsumableArray(sortedTasks), _toConsumableArray(tasksWithoutDate));
+  return sortType === 'asc' ? [].concat(_toConsumableArray(sortedTasks), _toConsumableArray(tasksWithoutDate)) : [].concat(_toConsumableArray(sortedTasks), _toConsumableArray(tasksWithoutDate));
 }
 
 // Вспомогательная функция для поиска ID категории по имени
@@ -59957,13 +59974,19 @@ function _changeTaskDate() {
           dateInput.focus();
           saveDate = /*#__PURE__*/function () {
             var _ref0 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16() {
-              var taskId, newDate, newSpan, _t13;
+              var taskId, newDate, localDate, newSpan, _t13;
               return _regenerator().w(function (_context16) {
                 while (1) switch (_context16.n) {
                   case 0:
                     _context16.p = 0;
                     taskId = taskElement.dataset.taskId;
-                    newDate = dateInput.value || null;
+                    newDate = null;
+                    if (dateInput.value) {
+                      // Создаем дату в локальном часовом поясе
+                      localDate = new Date(dateInput.value);
+                      localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                      newDate = localDate.toISOString(); // Преобразуем в ISO формат
+                    }
                     _context16.n = 1;
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateTask(taskId, {
                       due_date: newDate
@@ -60900,7 +60923,7 @@ function addProductivityChartToPdf(_x14, _x15) {
 } // Функция для создания изображения круговой диаграммы
 function _addProductivityChartToPdf() {
   _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25(docDefinition, productivityType) {
-    var startDate, endDate, startDateStr, endDateStr, days, dateArray, currentDate, labels, data, chartData, chartImage, _t18;
+    var startDate, endDate, startDateStr, endDateStr, days, productivityData, dateArray, currentDate, labels, data, chartData, canvas, ctx, chartImage, totalCompleted, avgCompleted, _t18;
     return _regenerator().w(function (_context25) {
       while (1) switch (_context25.n) {
         case 0:
@@ -60926,7 +60949,14 @@ function _addProductivityChartToPdf() {
             startDate.setDate(startDate.getDate() - days + 1);
             startDate.setHours(0, 0, 0, 0);
           }
-
+          _context25.p = 1;
+          _context25.n = 2;
+          return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          });
+        case 2:
+          productivityData = _context25.v;
           // Создаем массив дат для отображения
           dateArray = [];
           currentDate = new Date(startDate);
@@ -60940,11 +60970,12 @@ function _addProductivityChartToPdf() {
             return formatDateForChart(date);
           });
           data = dateArray.map(function (date) {
-            return tasks.completed.filter(function (task) {
-              if (!task.lastStatusChange) return false;
-              var taskDate = new Date(task.lastStatusChange);
-              return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-            }).length;
+            var dateStr = date.toISOString().split('T')[0];
+            var dayData = productivityData.find(function (item) {
+              var itemDate = new Date(item.date);
+              return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
           }); // Добавляем заголовок графика
           docDefinition.content.push({
             text: 'График продуктивности',
@@ -60954,7 +60985,7 @@ function _addProductivityChartToPdf() {
 
           // Добавляем описание периода
           docDefinition.content.push({
-            text: "\u041F\u0435\u0440\u0438\u043E\u0434: \u0441 ".concat(formatDate(startDate.toISOString()), " \u043F\u043E ").concat(formatDate(endDate.toISOString())),
+            text: "\u041F\u0435\u0440\u0438\u043E\u0434: \u0441 ".concat(formatDate(startDate), " \u043F\u043E ").concat(formatDate(endDate)),
             margin: [0, 0, 0, 10]
           });
 
@@ -60968,17 +60999,59 @@ function _addProductivityChartToPdf() {
               borderColor: '#388E3C',
               borderWidth: 1
             }]
-          };
-          _context25.p = 1;
-          _context25.n = 2;
-          return getBarChartImage(chartData);
-        case 2:
-          chartImage = _context25.v;
-          // Добавляем сам график
+          }; // Создаем временный canvas для графика
+          canvas = document.createElement('canvas');
+          canvas.width = 600;
+          canvas.height = 300;
+          ctx = canvas.getContext('2d'); // Создаем график
+          new chart_js_auto__WEBPACK_IMPORTED_MODULE_2__["default"](ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+              responsive: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                    font: {
+                      size: 12
+                    }
+                  }
+                },
+                x: {
+                  ticks: {
+                    font: {
+                      size: 12
+                    }
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              animation: false
+            }
+          });
+
+          // Получаем изображение графика
+          chartImage = canvas.toDataURL('image/png'); // Добавляем график в PDF
           docDefinition.content.push({
             image: chartImage,
             width: 500,
             alignment: 'center',
+            margin: [0, 0, 0, 20]
+          });
+
+          // Добавляем статистику
+          totalCompleted = data.reduce(function (sum, count) {
+            return sum + count;
+          }, 0);
+          avgCompleted = totalCompleted / data.length;
+          docDefinition.content.push({
+            text: ["\u0412\u0441\u0435\u0433\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434: ".concat(totalCompleted, "\n"), "\u0421\u0440\u0435\u0434\u043D\u0435\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0445 \u0437\u0430\u0434\u0430\u0447 \u0432 \u0434\u0435\u043D\u044C: ".concat(avgCompleted.toFixed(1))],
             margin: [0, 0, 0, 20]
           });
           _context25.n = 4;

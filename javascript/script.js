@@ -480,26 +480,36 @@ function renderTasks() {
         // Отбор по дате
         const dateFilter = document.getElementById('date-filter').value;
         if (dateFilter) {
-            const taskDate = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
-            if (!taskDate || taskDate !== dateFilter) return false;
+            if (!task.due_date) return false;
+            
+            // Преобразуем дату фильтра в объект Date
+            const filterDate = new Date(dateFilter);
+            filterDate.setHours(0, 0, 0, 0);
+            
+            // Преобразуем дату задачи в объект Date в локальном часовом поясе
+            const taskDate = new Date(task.due_date);
+            taskDate.setHours(0, 0, 0, 0);
+            
+            // Сравниваем даты, игнорируя время
+            if (taskDate.getTime() !== filterDate.getTime()) return false;
         }
 
         return true;
     };
 
     // Сортируем каждый из списков
-    const activeTasks = sortTasksByDate(tasks.active.filter(task => matchesFilters(task, false)));
-    const completedTasks = sortTasksByDate(tasks.completed.filter(task => matchesFilters(task, true)));
+    const activeTasks = sortTasksByDate([...tasks.active].filter(task => matchesFilters(task, false)));
+    const completedTasks = sortTasksByDate([...tasks.completed].filter(task => matchesFilters(task, true)));
 
     // Рендерим с сохранением оригинальных индексов
     activeTasks.forEach((task) => {
-        const originalIndex = tasks.active.findIndex(t => t === task);
+        const originalIndex = tasks.active.findIndex(t => t.task_id === task.task_id);
         const taskElement = createTaskElement(task, originalIndex, false);
         activeList.appendChild(taskElement);
     });
 
     completedTasks.forEach((task) => {
-        const originalIndex = tasks.completed.findIndex(t => t === task);
+        const originalIndex = tasks.completed.findIndex(t => t.task_id === task.task_id);
         const taskElement = createTaskElement(task, originalIndex, true);
         completedList.appendChild(taskElement);
     });
@@ -842,11 +852,19 @@ async function addTask() {
 
         if (newTitle.value) {
             try {
+                let dueDate = null;
+                if (dueDateInput.value) {
+                    // Создаем дату в локальном часовом поясе
+                    const localDate = new Date(dueDateInput.value);
+                    localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                    dueDate = localDate.toISOString(); // Преобразуем в ISO формат
+                }
+
                 const taskData = {
                     title: newTitle.value,
                     description: '',
                     category_id: selectCat.value,
-                    due_date: dueDateInput.value || null
+                    due_date: dueDate
                 };
 
                 await todoAPI.createTask(taskData);
@@ -992,19 +1010,19 @@ function sortTasksByDate(tasksArray) {
 
         // Для сортировки по близости к текущей дате
         if (sortType === 'nearest' || sortType === 'farthest') {
-            const aDiff = Math.abs(aDate - today);
-            const bDiff = Math.abs(bDate - today);
+            const aDiff = Math.abs(aDate.getTime() - today.getTime());
+            const bDiff = Math.abs(bDate.getTime() - today.getTime());
 
             return sortType === 'nearest' ? aDiff - bDiff : bDiff - aDiff;
         }
         // Для простой сортировки по дате
         else {
-            return sortType === 'asc' ? aDate - bDate : bDate - aDate;
+            return sortType === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
         }
     });
 
     // Возвращаем отсортированные задачи с датой + задачи без даты
-    return [...sortedTasks, ...tasksWithoutDate];
+    return sortType === 'asc' ? [...sortedTasks, ...tasksWithoutDate] : [...sortedTasks, ...tasksWithoutDate];
 }
 
 // Вспомогательная функция для поиска ID категории по имени
@@ -1203,7 +1221,14 @@ async function changeTaskDate(event) {
     const saveDate = async () => {
         try {
             const taskId = taskElement.dataset.taskId;
-            const newDate = dateInput.value || null;
+            let newDate = null;
+
+            if (dateInput.value) {
+                // Создаем дату в локальном часовом поясе
+                const localDate = new Date(dateInput.value);
+                localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                newDate = localDate.toISOString(); // Преобразуем в ISO формат
+            }
 
             await todoAPI.updateTask(taskId, { due_date: newDate });
             await loadTasks(); // Перезагружаем задачи для обновления UI
@@ -2088,63 +2113,120 @@ async function addProductivityChartToPdf(docDefinition, productivityType) {
         startDate.setHours(0, 0, 0, 0);
     }
 
-    // Создаем массив дат для отображения
-    const dateArray = [];
-    const currentDate = new Date(startDate);
+    try {
+        // Получаем данные с сервера
+        const productivityData = await todoAPI.getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
 
-    while (currentDate <= endDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
+        // Создаем массив дат для отображения
+        const dateArray = [];
+        const currentDate = new Date(startDate);
 
-    // Подготавливаем данные для графика
-    const labels = dateArray.map(date => formatDateForChart(date));
-    const data = dateArray.map(date => {
-        return tasks.completed.filter(task => {
-            if (!task.lastStatusChange) return false;
-            const taskDate = new Date(task.lastStatusChange);
-            return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-        }).length;
-    });
+        while (currentDate <= endDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
-    // Добавляем заголовок графика
-    docDefinition.content.push({
-        text: 'График продуктивности',
-        style: 'subheader',
-        margin: [0, 20, 0, 10]
-    });
+        // Подготавливаем данные для графика
+        const labels = dateArray.map(date => formatDateForChart(date));
+        const data = dateArray.map(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = productivityData.find(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
+        });
 
-    // Добавляем описание периода
-    docDefinition.content.push({
-        text: `Период: с ${formatDate(startDate.toISOString())} по ${formatDate(endDate.toISOString())}`,
-        margin: [0, 0, 0, 10]
-    });
+        // Добавляем заголовок графика
+        docDefinition.content.push({
+            text: 'График продуктивности',
+            style: 'subheader',
+            margin: [0, 20, 0, 10]
+        });
 
-    // Создаем данные для графика
-    const chartData = {
-        labels: labels,
-        datasets: [
-            {
+        // Добавляем описание периода
+        docDefinition.content.push({
+            text: `Период: с ${formatDate(startDate)} по ${formatDate(endDate)}`,
+            margin: [0, 0, 0, 10]
+        });
+
+        // Создаем данные для графика
+        const chartData = {
+            labels: labels,
+            datasets: [{
                 label: 'Выполнено задач',
                 data: data,
                 backgroundColor: '#4CAF50',
                 borderColor: '#388E3C',
                 borderWidth: 1
+            }]
+        };
+
+        // Создаем временный canvas для графика
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+
+        // Создаем график
+        new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                animation: false
             }
-        ]
-    };
+        });
 
-    try {
         // Получаем изображение графика
-        const chartImage = await getBarChartImage(chartData);
+        const chartImage = canvas.toDataURL('image/png');
 
-        // Добавляем сам график
+        // Добавляем график в PDF
         docDefinition.content.push({
             image: chartImage,
             width: 500,
             alignment: 'center',
             margin: [0, 0, 0, 20]
         });
+
+        // Добавляем статистику
+        const totalCompleted = data.reduce((sum, count) => sum + count, 0);
+        const avgCompleted = totalCompleted / data.length;
+
+        docDefinition.content.push({
+            text: [
+                `Всего выполнено задач за период: ${totalCompleted}\n`,
+                `Среднее количество выполненных задач в день: ${avgCompleted.toFixed(1)}`
+            ],
+            margin: [0, 0, 0, 20]
+        });
+
     } catch (error) {
         console.error('Ошибка при создании графика продуктивности:', error);
         docDefinition.content.push({
