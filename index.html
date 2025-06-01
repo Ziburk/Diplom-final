@@ -13,6 +13,9 @@
     <script src="./node_modules/pdfmake/build/pdfmake.min.js"></script>
     <script src="./node_modules/pdfmake/build/vfs_fonts.js"></script>
 
+    <!-- Скрипты авторизации -->
+    <script src="javascript/auth.js"></script>
+
     <!-- Основной скрипт -->
     <script src="dist/bundle.js" defer></script>
 </head>
@@ -26,13 +29,14 @@
             <h1 class="header-title">To Do List by @Ziburk</h1>
         </div>
         <div class="profile-wrapper">
-            <div id="telegram-login-container">
-                <!-- Здесь будет виджет входа через Telegram -->
-            </div>
+            <div id="telegram-login-container" class="hidden"></div>
             <div id="user-profile" class="hidden">
-                <img id="user-avatar" src="img/profile.svg" alt="Profile" class="user-avatar">
-                <span id="user-name"></span>
-                <button id="logout-button" class="logout-button">Выйти</button>
+                <img id="user-avatar" class="user-avatar" alt="Аватар пользователя">
+                <span id="user-name" class="user-name"></span>
+                <button id="logout-button" class="logout-button">
+                    <img src="img/logout.svg" alt="Выйти" class="logout-icon">
+                    Выйти
+                </button>
             </div>
         </div>
     </header>

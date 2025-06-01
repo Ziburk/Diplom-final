@@ -85,7 +85,9 @@ const init = async () => {
     try {
         // Проверяем авторизацию
         const token = localStorage.getItem('auth_token');
-        if (!token) {
+        const savedUser = localStorage.getItem('telegramUser');
+        
+        if (!token || !savedUser) {
             window.location.href = '/login.html';
             return;
         }
@@ -101,6 +103,9 @@ const init = async () => {
             if (!response.ok) {
                 throw new Error('Токен недействителен');
             }
+
+            // Обновляем UI для авторизованного пользователя
+            updateUIForLoggedInUser(JSON.parse(savedUser));
         } catch (error) {
             console.error('Ошибка проверки токена:', error);
             window.location.href = '/login.html';

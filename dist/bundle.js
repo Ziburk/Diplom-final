@@ -58596,14 +58596,15 @@ var EXPORT_PRODUCTIVITY_TYPES = {
 // Главная функция всей программы. Инициализация компонентов и присваивание событий
 var init = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-    var token, response, taskLists, _t, _t2;
+    var token, savedUser, response, taskLists, _t, _t2;
     return _regenerator().w(function (_context2) {
       while (1) switch (_context2.n) {
         case 0:
           _context2.p = 0;
           // Проверяем авторизацию
           token = localStorage.getItem('auth_token');
-          if (token) {
+          savedUser = localStorage.getItem('telegramUser');
+          if (!(!token || !savedUser)) {
             _context2.n = 1;
             break;
           }
@@ -58625,6 +58626,8 @@ var init = /*#__PURE__*/function () {
           }
           throw new Error('Токен недействителен');
         case 3:
+          // Обновляем UI для авторизованного пользователя
+          updateUIForLoggedInUser(JSON.parse(savedUser));
           _context2.n = 5;
           break;
         case 4:
