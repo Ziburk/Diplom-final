@@ -1,6 +1,6 @@
 const { Telegraf, Markup } = require('telegraf');
-const config = require('./src/config/config');
-const db = require('./src/bot/db');
+const config = require('../config/config');
+const db = require('./db');
 
 // Добавляем поддержку сессий
 const { session } = require('telegraf');

@@ -1,4 +1,6 @@
 const Task = require('../models/Task');
+const pool = require('../config/db');
+const notificationService = require('../services/notificationService');
 
 class TaskController {
     /**
@@ -82,20 +84,48 @@ class TaskController {
      * @param {Object} res - Express response object
      */
     static async updateTask(req, res) {
+        const { id } = req.params;
+        const { title, description, category_id, due_date, notification_time, notifications_enabled, status } = req.body;
+        const userId = req.user.user_id;
+
         try {
-            const userId = req.user.user_id;
-            const taskId = parseInt(req.params.taskId);
-            const updateData = req.body;
+            // Получаем текущие данные задачи
+            const currentTask = await pool.query(
+                'SELECT due_date, notification_time FROM tasks WHERE task_id = $1 AND user_id = $2',
+                [id, userId]
+            );
 
-            const task = await Task.update(taskId, userId, updateData);
-
-            if (!task) {
+            if (currentTask.rows.length === 0) {
                 return res.status(404).json({ error: 'Задача не найдена' });
             }
 
-            res.json(task);
+            // Проверяем, изменились ли дата или время уведомления
+            const dateChanged = due_date !== currentTask.rows[0].due_date;
+            const notificationTimeChanged = notification_time !== currentTask.rows[0].notification_time;
+
+            // Обновляем задачу
+            const result = await pool.query(
+                `UPDATE tasks 
+                 SET title = COALESCE($1, title),
+                     description = COALESCE($2, description),
+                     category_id = COALESCE($3, category_id),
+                     due_date = COALESCE($4, due_date),
+                     notification_time = COALESCE($5, notification_time),
+                     notifications_enabled = COALESCE($6, notifications_enabled),
+                     status = COALESCE($7, status)
+                 WHERE task_id = $8 AND user_id = $9
+                 RETURNING *`,
+                [title, description, category_id, due_date, notification_time, notifications_enabled, status, id, userId]
+            );
+
+            // Если изменилась дата или время уведомления, очищаем историю уведомлений
+            if (dateChanged || notificationTimeChanged) {
+                await notificationService.clearNotificationHistory(id, userId);
+            }
+
+            res.json(result.rows[0]);
         } catch (error) {
-            console.error('Error in updateTask:', error);
+            console.error('Ошибка при обновлении задачи:', error);
             res.status(500).json({ error: 'Ошибка при обновлении задачи' });
         }
     }
