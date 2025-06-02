@@ -548,6 +548,9 @@ function createTaskElement(task, index, isCompleted) {
     const htmlDescription = task.description ? tempEditor.getHTML() : 'Нет описания';
     tempEditor.destroy();
 
+    const hasNotification = task.notification_time !== null && task.notification_time !== undefined;
+    const notificationClass = hasNotification ? 'has-notification' : '';
+
     taskElement.innerHTML = `
     <div class="task-wrapper">
         <div class="task-title-wrapper">
@@ -562,6 +565,9 @@ function createTaskElement(task, index, isCompleted) {
             </button>
         </div>
         <div class="task-date-wrapper">
+            <button class="notification-btn ${notificationClass} ${isCompleted ? 'disabled' : ''}" title="Настроить уведомления">
+                <img src="img/bell.svg" alt="Уведомления">
+            </button>
             <span class="task-due-date">${formatDate(task.due_date)}</span>
             <button class="task-change-date">
                 <img class="task-change-date-logo" src="img/edit-ico.svg" alt="Изменить дату">
@@ -589,7 +595,196 @@ function createTaskElement(task, index, isCompleted) {
     </div>`;
 
     taskElement.setAttribute('style', `border-color: ${category.color}`);
+
+    // Добавляем обработчик для кнопки уведомлений
+    const notificationBtn = taskElement.querySelector('.notification-btn');
+    notificationBtn.addEventListener('click', (e) => {
+        if (!isCompleted) {  // Добавляем проверку
+            e.stopPropagation();
+            showNotificationDropdown(taskElement, task);
+        }
+    });
+
     return taskElement;
+}
+
+// Функция для отображения выпадающего меню уведомлений
+function showNotificationDropdown(taskElement, task) {
+    // Если задача выполнена, не показываем дропдаун
+    if (task.status === 'completed') return;
+
+    // Закрываем все открытые дропдауны
+    document.querySelectorAll('.notification-dropdown').forEach(dropdown => dropdown.remove());
+
+    const notificationBtn = taskElement.querySelector('.notification-btn');
+    const taskDueDate = task.due_date ? new Date(task.due_date) : null;
+
+    // Создаем дропдаун
+    const dropdown = document.createElement('div');
+    dropdown.className = 'notification-dropdown';
+
+    // Получаем текущие настройки уведомления
+    const currentNotification = task.notification_time ? new Date(task.notification_time) : null;
+    const isEnabled = task.notifications_enabled || false;
+
+    dropdown.innerHTML = `
+        <h4>Настройка уведомления</h4>
+        <div class="notification-form">
+            <div class="notification-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="notifications-enabled" ${isEnabled ? 'checked' : ''}>
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">Уведомления ${isEnabled ? 'включены' : 'выключены'}</span>
+            </div>
+            <div class="notification-datetime ${!isEnabled ? 'disabled' : ''}">
+                <input type="date" id="notification-date" 
+                    ${taskDueDate ? `max="${taskDueDate.toISOString().split('T')[0]}"` : ''} 
+                    value="${currentNotification ? currentNotification.toISOString().split('T')[0] : ''}"
+                    ${!isEnabled ? 'disabled' : ''}
+                >
+                <input type="time" id="notification-time" 
+                    value="${currentNotification ? currentNotification.toTimeString().slice(0,5) : ''}"
+                    ${!isEnabled ? 'disabled' : ''}
+                >
+            </div>
+            <div class="notification-error hidden"></div>
+            <div class="notification-actions">
+                <button class="save-notification">Сохранить</button>
+            </div>
+        </div>
+    `;
+
+    // Позиционируем дропдаун
+    const rect = notificationBtn.getBoundingClientRect();
+    dropdown.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    dropdown.style.left = `${rect.left + window.scrollX}px`;
+
+    document.body.appendChild(dropdown);
+
+    // Обработчики событий
+    const toggleSwitch = dropdown.querySelector('#notifications-enabled');
+    const dateInput = dropdown.querySelector('#notification-date');
+    const timeInput = dropdown.querySelector('#notification-time');
+    const errorDiv = dropdown.querySelector('.notification-error');
+    const datetimeDiv = dropdown.querySelector('.notification-datetime');
+    const toggleLabel = dropdown.querySelector('.toggle-label');
+
+    // Обработчик переключателя
+    toggleSwitch.addEventListener('change', (e) => {
+        const isEnabled = e.target.checked;
+        toggleLabel.textContent = `Уведомления ${isEnabled ? 'включены' : 'выключены'}`;
+        dateInput.disabled = !isEnabled;
+        timeInput.disabled = !isEnabled;
+        datetimeDiv.classList.toggle('disabled', !isEnabled);
+    });
+
+    // Валидация даты и времени
+    function validateDateTime() {
+        if (!toggleSwitch.checked) return true;
+
+        const selectedDate = dateInput.value;
+        const selectedTime = timeInput.value;
+        const taskHasDate = task.due_date !== null;
+
+        // Если у задачи нет даты, то обязательно нужно выбрать дату и время
+        if (!taskHasDate && (!selectedDate || !selectedTime)) {
+            errorDiv.textContent = 'Для задачи без даты необходимо указать дату и время уведомления';
+            errorDiv.classList.remove('hidden');
+            return false;
+        }
+
+        // Если выбрана дата и/или время, проверяем их
+        if (selectedDate && selectedTime) {
+            const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+            const now = new Date();
+
+            if (selectedDateTime < now) {
+                errorDiv.textContent = 'Нельзя выбрать прошедшее время';
+                errorDiv.classList.remove('hidden');
+                return false;
+            }
+
+            if (taskHasDate) {
+                const taskDueDate = new Date(task.due_date);
+                if (selectedDateTime > taskDueDate) {
+                    errorDiv.textContent = 'Время уведомления не может быть позже срока задачи';
+                    errorDiv.classList.remove('hidden');
+                    return false;
+                }
+            }
+        }
+
+        errorDiv.classList.add('hidden');
+        return true;
+    }
+
+    // Убираем валидацию при изменении даты/времени
+    dateInput.addEventListener('change', () => {
+        errorDiv.classList.add('hidden');
+    });
+    timeInput.addEventListener('change', () => {
+        errorDiv.classList.add('hidden');
+    });
+
+    // Закрытие time input при потере фокуса
+    timeInput.addEventListener('blur', () => {
+        // Даем браузеру время на обработку выбора
+        setTimeout(() => {
+            timeInput.type = 'text';
+            timeInput.type = 'time';
+        }, 200);
+    });
+
+    // Сохранение настроек
+    dropdown.querySelector('.save-notification').addEventListener('click', async () => {
+        if (!validateDateTime()) return;
+
+        try {
+            const updateData = {
+                notifications_enabled: toggleSwitch.checked
+            };
+
+            if (toggleSwitch.checked) {
+                if (dateInput.value && timeInput.value) {
+                    // Если выбраны конкретные дата и время
+                    const notificationTime = new Date(`${dateInput.value}T${timeInput.value}`);
+                    updateData.notification_time = notificationTime.toISOString();
+                } else if (task.due_date) {
+                    // Если не выбраны дата и время, но у задачи есть дата - ставим 8:00
+                    const taskDate = new Date(task.due_date);
+                    taskDate.setHours(8, 0, 0, 0);
+                    updateData.notification_time = taskDate.toISOString();
+                } else {
+                    // Если у задачи нет даты и не выбрано время - просто включаем уведомления без времени
+                    updateData.notification_time = null;
+                }
+            } else {
+                updateData.notification_time = null;
+            }
+
+            await todoAPI.updateTaskNotifications(task.task_id, updateData);
+            
+            // Обновляем состояние кнопки уведомлений
+            notificationBtn.classList.toggle('has-notification', toggleSwitch.checked);
+            task.notifications_enabled = toggleSwitch.checked;
+            task.notification_time = updateData.notification_time;
+            
+            dropdown.remove();
+        } catch (error) {
+            console.error('Ошибка при сохранении настроек уведомления:', error);
+            errorDiv.textContent = 'Ошибка при сохранении настроек';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    // Закрытие дропдауна при клике вне его
+    document.addEventListener('click', function closeDropdown(e) {
+        if (!dropdown.contains(e.target) && !notificationBtn.contains(e.target)) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+        }
+    });
 }
 
 // Функция отображения настроек категорий
@@ -1235,6 +1430,40 @@ async function changeTaskDate(event) {
                 newDate = localDate.toISOString(); // Преобразуем в ISO формат
             }
 
+            // Получаем текущую задачу для проверки настроек уведомлений
+            const task = await todoAPI.findTask(taskId);
+
+            // Если у задачи включены уведомления и не установлено конкретное время (стандартное уведомление)
+            if (task.notifications_enabled && task.notification_time) {
+                const notificationDate = new Date(task.notification_time);
+                const oldTaskDate = new Date(task.due_date);
+                
+                // Проверяем, было ли установлено стандартное время уведомления (8:00)
+                if (notificationDate.getHours() === 8 && 
+                    notificationDate.getMinutes() === 0 &&
+                    notificationDate.getDate() === oldTaskDate.getDate() &&
+                    notificationDate.getMonth() === oldTaskDate.getMonth() &&
+                    notificationDate.getFullYear() === oldTaskDate.getFullYear()) {
+                    
+                    // Если это стандартное уведомление, обновляем его на новую дату
+                    if (newDate) {
+                        const newNotificationDate = new Date(newDate);
+                        newNotificationDate.setHours(8, 0, 0, 0);
+                        await todoAPI.updateTaskNotifications(taskId, {
+                            notifications_enabled: true,
+                            notification_time: newNotificationDate.toISOString()
+                        });
+                    } else {
+                        // Если дата задачи удалена, отключаем уведомления
+                        await todoAPI.updateTaskNotifications(taskId, {
+                            notifications_enabled: false,
+                            notification_time: null
+                        });
+                    }
+                }
+            }
+
+            // Обновляем дату задачи
             await todoAPI.updateTask(taskId, { due_date: newDate });
             await loadTasks(); // Перезагружаем задачи для обновления UI
 
@@ -1319,10 +1548,15 @@ async function completeTask(event) {
         const taskId = taskElement.dataset.taskId;
         const isCompleted = taskElement.dataset.isCompleted === 'true';
 
-        if (isCompleted) {
-            await todoAPI.uncompleteTask(taskId);
-        } else {
+        if (!isCompleted) {
+            // Если задача отмечается как выполненная, отключаем уведомления
+            await todoAPI.updateTaskNotifications(taskId, {
+                notifications_enabled: false,
+                notification_time: null
+            });
             await todoAPI.completeTask(taskId);
+        } else {
+            await todoAPI.uncompleteTask(taskId);
         }
 
         await loadTasks(); // Перезагружаем задачи

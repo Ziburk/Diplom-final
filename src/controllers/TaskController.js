@@ -26,6 +26,29 @@ class TaskController {
     }
 
     /**
+     * Получает задачу по ID
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object
+     */
+    static async getTaskById(req, res) {
+        try {
+            const userId = req.user.user_id;
+            const taskId = parseInt(req.params.taskId);
+
+            const task = await Task.findById(taskId, userId);
+
+            if (!task) {
+                return res.status(404).json({ error: 'Задача не найдена' });
+            }
+
+            res.json(task);
+        } catch (error) {
+            console.error('Error in getTaskById:', error);
+            res.status(500).json({ error: 'Ошибка при получении задачи' });
+        }
+    }
+
+    /**
      * Создает новую задачу
      * @param {Object} req - Express request object
      * @param {Object} res - Express response object
@@ -191,6 +214,36 @@ class TaskController {
         } catch (error) {
             console.error('Error in getProductivityData:', error);
             res.status(500).json({ error: 'Ошибка при получении данных продуктивности' });
+        }
+    }
+
+    /**
+     * Обновляет настройки уведомлений задачи
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object
+     */
+    static async updateTaskNotifications(req, res) {
+        try {
+            const userId = req.user.user_id;
+            const taskId = parseInt(req.params.taskId);
+            const { notifications_enabled, notification_time } = req.body;
+
+            // Проверяем существование задачи и права доступа
+            const task = await Task.findById(taskId, userId);
+            if (!task) {
+                return res.status(404).json({ error: 'Задача не найдена' });
+            }
+
+            // Обновляем настройки уведомлений
+            const updatedTask = await Task.updateNotifications(taskId, userId, {
+                notifications_enabled,
+                notification_time
+            });
+
+            res.json(updatedTask);
+        } catch (error) {
+            console.error('Error in updateTaskNotifications:', error);
+            res.status(500).json({ error: 'Ошибка при обновлении настроек уведомлений' });
         }
     }
 }

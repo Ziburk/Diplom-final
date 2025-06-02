@@ -336,6 +336,61 @@ class Task {
             throw error;
         }
     }
+
+    /**
+     * Находит задачу по ID
+     * @param {number} taskId - ID задачи
+     * @param {number} userId - ID пользователя
+     * @returns {Promise<Object|null>} Найденная задача или null
+     */
+    static async findById(taskId, userId) {
+        try {
+            const query = `
+                SELECT t.*, c.name as category_name, c.color as category_color
+                FROM tasks t
+                LEFT JOIN categories c ON t.category_id = c.category_id AND t.user_id = c.user_id
+                WHERE t.task_id = $1 AND t.user_id = $2
+            `;
+            const result = await pool.query(query, [taskId, userId]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('Error in findById:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Обновляет настройки уведомлений задачи
+     * @param {number} taskId - ID задачи
+     * @param {number} userId - ID пользователя
+     * @param {Object} settings - Настройки уведомлений
+     * @param {boolean} settings.notifications_enabled - Включены ли уведомления
+     * @param {string|null} settings.notification_time - Время уведомления
+     * @returns {Promise<Object>} Обновленная задача
+     */
+    static async updateNotifications(taskId, userId, settings) {
+        try {
+            const query = `
+                UPDATE tasks
+                SET notifications_enabled = $1,
+                    notification_time = $2
+                WHERE task_id = $3 AND user_id = $4
+                RETURNING *
+            `;
+            
+            const result = await pool.query(query, [
+                settings.notifications_enabled,
+                settings.notification_time,
+                taskId,
+                userId
+            ]);
+
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error in updateNotifications:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = Task;

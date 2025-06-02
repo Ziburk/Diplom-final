@@ -92,6 +92,10 @@ class TodoAPI {
         return this.fetchAPI('/tasks');
     }
 
+    async findTask(taskId) {
+        return this.fetchAPI(`/tasks/${taskId}`);
+    }
+
     async createTask(taskData) {
         return this.fetchAPI('/tasks', {
             method: 'POST',
@@ -150,6 +154,21 @@ class TodoAPI {
     async getProductivityData(params) {
         const queryParams = new URLSearchParams(params);
         return this.fetchAPI(`/tasks/stats/productivity?${queryParams.toString()}`);
+    }
+
+    /**
+     * Обновляет настройки уведомлений задачи
+     * @param {string} taskId - ID задачи
+     * @param {Object} notificationSettings - Настройки уведомлений
+     * @param {boolean} notificationSettings.notifications_enabled - Включены ли уведомления
+     * @param {string|null} notificationSettings.notification_time - Время уведомления в ISO формате
+     * @returns {Promise<Object>} Обновленная задача
+     */
+    async updateTaskNotifications(taskId, notificationSettings) {
+        return this.fetchAPI(`/tasks/${taskId}/notifications`, {
+            method: 'PATCH',
+            body: JSON.stringify(notificationSettings)
+        });
     }
 }
 

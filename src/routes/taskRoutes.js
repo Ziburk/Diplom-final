@@ -30,4 +30,10 @@ router.delete('/:taskId', TaskController.deleteTask);
 // Изменить статус задачи
 router.patch('/:taskId/status', TaskController.changeTaskStatus);
 
+// Обновить настройки уведомлений задачи
+router.patch('/:taskId/notifications', TaskController.updateTaskNotifications);
+
+// Получить задачу по ID (должен быть последним GET маршрутом)
+router.get('/:taskId', TaskController.getTaskById);
+
 module.exports = router;
