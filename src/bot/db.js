@@ -53,14 +53,35 @@ async function getUserTasks(userId) {
     };
 }
 
-async function createTask(userId, title, categoryId, dueDate) {
-    const query = `
-        INSERT INTO tasks (user_id, title, category_id, due_date, status)
-        VALUES ($1, $2, $3, $4, 'active')
-        RETURNING *
-    `;
-    const result = await pool.query(query, [userId, title, categoryId, dueDate]);
-    return result.rows[0];
+async function createTask(userId, title, categoryId, dueDate, order = 0) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Сначала сдвигаем order всех существующих задач
+        const updateOrderQuery = `
+            UPDATE tasks 
+            SET "order" = "order" + 1 
+            WHERE user_id = $1
+        `;
+        await client.query(updateOrderQuery, [userId]);
+
+        // Затем создаем новую задачу с order = 0
+        const createTaskQuery = `
+            INSERT INTO tasks (user_id, title, category_id, due_date, status, "order")
+            VALUES ($1, $2, $3, $4, 'active', 0)
+            RETURNING *
+        `;
+        const result = await client.query(createTaskQuery, [userId, title, categoryId, dueDate]);
+
+        await client.query('COMMIT');
+        return result.rows[0];
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 async function completeTask(taskId, userId) {
@@ -133,6 +154,50 @@ async function createDefaultCategories(userId) {
     }
 }
 
+async function getTaskById(taskId) {
+    const query = `
+        SELECT t.*, c.name as category_name, c.color as category_color 
+        FROM tasks t
+        LEFT JOIN categories c ON t.category_id = c.category_id
+        WHERE t.task_id = $1
+    `;
+    const result = await pool.query(query, [taskId]);
+    return result.rows[0];
+}
+
+async function updateTaskTitle(taskId, title) {
+    const query = `
+        UPDATE tasks 
+        SET title = $2
+        WHERE task_id = $1
+        RETURNING *
+    `;
+    const result = await pool.query(query, [taskId, title]);
+    return result.rows[0];
+}
+
+async function updateTaskOrder(taskId, order) {
+    const query = `
+        UPDATE tasks 
+        SET "order" = $2
+        WHERE task_id = $1
+        RETURNING *
+    `;
+    const result = await pool.query(query, [taskId, order]);
+    return result.rows[0];
+}
+
+async function updateTaskNotifications(taskId, { notifications_enabled, notification_time }) {
+    const query = `
+        UPDATE tasks 
+        SET notifications_enabled = $1, notification_time = $2
+        WHERE task_id = $3
+        RETURNING *
+    `;
+    const result = await pool.query(query, [notifications_enabled, notification_time, taskId]);
+    return result.rows[0];
+}
+
 module.exports = {
     getOrCreateUser,
     getUserCategories,
@@ -144,5 +209,9 @@ module.exports = {
     updateTaskDate,
     updateTaskCategory,
     deleteTask,
-    createDefaultCategories
+    createDefaultCategories,
+    getTaskById,
+    updateTaskTitle,
+    updateTaskOrder,
+    updateTaskNotifications
 }; 

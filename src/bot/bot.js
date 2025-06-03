@@ -14,6 +14,9 @@ bot.use(session());
 // Глобальный объект для хранения задач
 let users = {};
 
+// Глобальная переменная для хранения категорий
+let categories = {};
+
 // Создадим функцию для инициализации данных нового пользователя
 function initializeUserData(userId) {
     if (!users[userId]) {
@@ -49,6 +52,19 @@ function initializeUserData(userId) {
     return users[userId];
 }
 
+// Функция загрузки категорий
+async function loadCategories(userId) {
+    try {
+        const userCategories = await db.getUserCategories(userId);
+        categories = userCategories.reduce((acc, category) => {
+            acc[category.category_id] = category;
+            return acc;
+        }, {});
+    } catch (error) {
+        console.error('Ошибка при загрузке категорий:', error);
+    }
+}
+
 // Форматирование даты
 function formatDate(dateString) {
     if (!dateString) return 'Без срока';
@@ -61,76 +77,86 @@ function formatDate(dateString) {
 }
 
 // Функция создания календаря
-function createCalendarKeyboard(selectedDate = null) {
-    const date = selectedDate ? new Date(selectedDate) : new Date();
-    const month = date.getMonth();
-    const year = date.getFullYear();
-
+function createCalendarKeyboard(selectedDate = null, isNotification = false) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения дат
+    const currentDate = selectedDate ? new Date(selectedDate) : new Date();
+    
     const keyboard = [];
-
-    // Добавляем заголовок с месяцем и годом
-    const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ];
-
+    const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    
+    // Добавляем заголовок с месяцем и годом и кнопки навигации
     keyboard.push([
-        Markup.button.callback('←', `calendar:${year}:${month - 1}`),
-        Markup.button.callback(`${monthNames[month]} ${year}`, 'ignore'),
-        Markup.button.callback('→', `calendar:${year}:${month + 1}`)
+        Markup.button.callback('←', `calendar:${currentDate.getFullYear()}:${currentDate.getMonth()}:prev`),
+        Markup.button.callback(
+            `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`,
+            'ignore'
+        ),
+        Markup.button.callback('→', `calendar:${currentDate.getFullYear()}:${currentDate.getMonth()}:next`)
     ]);
-
+    
     // Добавляем дни недели
     keyboard.push(['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day =>
         Markup.button.callback(day, 'ignore')
     ));
-
+    
     // Получаем первый день месяца
-    const firstDay = new Date(year, month, 1);
-    let firstDayIndex = firstDay.getDay() || 7; // Преобразуем воскресенье (0) в 7
-    firstDayIndex--; // Корректируем для начала недели с понедельника
-
+    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    let startingDay = firstDay.getDay() || 7; // Преобразуем 0 (воскресенье) в 7
+    startingDay--; // Корректируем для начала недели с понедельника
+    
     // Получаем количество дней в месяце
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    let currentRow = [];
-
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    
+    // Создаем массив для дней
+    let days = [];
+    
     // Добавляем пустые ячейки в начале
-    for (let i = 0; i < firstDayIndex; i++) {
-        currentRow.push(Markup.button.callback(' ', 'ignore'));
+    for (let i = 0; i < startingDay; i++) {
+        days.push(Markup.button.callback(' ', 'ignore'));
     }
-
+    
     // Добавляем дни месяца
     for (let day = 1; day <= daysInMonth; day++) {
-        currentRow.push(Markup.button.callback(
-            day.toString().padStart(2, ' '),
-            `select_date:${year}:${month}:${day}`
-        ));
-
-        if (currentRow.length === 7) {
-            keyboard.push(currentRow);
-            currentRow = [];
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        date.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения
+        const dateStr = date.toISOString();
+        
+        // Определяем, активна ли кнопка (теперь разрешаем выбор сегодняшнего дня)
+        const isDisabled = date < today;
+        const displayDay = day.toString().padStart(2, '0');
+        
+        if (isDisabled) {
+            days.push(Markup.button.callback(displayDay, 'ignore'));
+        } else {
+            const action = isNotification ? 
+                `select_notification_date:${dateStr}` : 
+                `select_date:${dateStr}`;
+            days.push(Markup.button.callback(displayDay, action));
+        }
+        
+        // Начинаем новую строку после воскресенья
+        if ((startingDay + day) % 7 === 0) {
+            keyboard.push(days);
+            days = [];
         }
     }
-
-    // Добавляем оставшиеся пустые ячейки
-    while (currentRow.length > 0 && currentRow.length < 7) {
-        currentRow.push(Markup.button.callback(' ', 'ignore'));
-        if (currentRow.length === 7) {
-            keyboard.push(currentRow);
+    
+    // Добавляем оставшиеся дни
+    if (days.length > 0) {
+        // Добавляем пустые ячейки в конце
+        while (days.length < 7) {
+            days.push(Markup.button.callback(' ', 'ignore'));
         }
+        keyboard.push(days);
     }
-
-    // Добавляем кнопку "Без даты"
-    keyboard.push([Markup.button.callback('Без даты', 'select_date:no_date')]);
-
-    return keyboard;
+    
+    return Markup.inlineKeyboard(keyboard);
 }
 
-// Команда /start
+// Обработчик команды /start
 bot.command('start', async (ctx) => {
     try {
-        // Получаем или создаем пользователя
         const user = await db.getOrCreateUser(
             ctx.from.id,
             ctx.from.username,
@@ -138,28 +164,21 @@ bot.command('start', async (ctx) => {
             ctx.from.last_name
         );
 
-        // Создаем стандартные категории для нового пользователя
-        await db.createDefaultCategories(user.user_id);
+        const keyboard = Markup.keyboard([
+            ['➕ Добавить задачу'],
+            ['🏷 Категории', '📊 Статистика'],
+            ['❓ Помощь']
+        ]).resize();
 
-        ctx.reply(
-            'Добро пожаловать в ToDo List бот!\n\n' +
-            'Доступные команды:\n' +
-            '/add - Добавить новую задачу\n' +
-            '/list - Показать список задач\n' +
-            '/categories - Управление категориями\n' +
-            '/stats - Показать статистику\n' +
-            '/help - Показать справку',
-            Markup.keyboard([
-                ['📝 Добавить задачу', '📋 Список задач'],
-                ['🏷 Категории', '📊 Статистика'],
-                ['❓ Помощь']
-            ]).resize()
-        );
+        ctx.reply('Добро пожаловать! Выберите действие:', keyboard);
     } catch (error) {
-        console.error('Ошибка при выполнении команды /start:', error);
+        console.error('Ошибка при запуске бота:', error);
         ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
     }
 });
+
+// Команда /add
+bot.command('add', (ctx) => startAddingTask(ctx));
 
 // Команда /help
 bot.command('help', (ctx) => {
@@ -201,7 +220,8 @@ async function startAddingTask(ctx) {
             ctx.from.last_name
         );
 
-        const categories = await db.getUserCategories(user.user_id);
+        // Загружаем категории перед началом добавления задачи
+        await loadCategories(user.user_id);
         
         ctx.reply('Введите название задачи:');
         ctx.session = {
@@ -224,37 +244,331 @@ async function showTasksList(ctx) {
             ctx.from.last_name
         );
 
+        // Загружаем категории перед отображением списка
+        await loadCategories(user.user_id);
+
         const tasks = await db.getUserTasks(user.user_id);
 
-        const activeTasksList = tasks.active.map((task, index) => {
-            return `${index + 1}. ${task.title}\n` +
-                `📅 ${formatDate(task.due_date)}\n` +
-                `🏷 ${task.category_name || 'Без категории'}\n`;
-        }).join('\n');
+        let message = '📋 <b>Список задач</b>\n\n';
 
-        const completedTasksList = tasks.completed.map((task, index) => {
-            return `${index + 1}. ✅ ${task.title}\n` +
-                `📅 ${formatDate(task.due_date)}\n` +
-                `🏷 ${task.category_name || 'Без категории'}\n`;
-        }).join('\n');
+        if (tasks.active.length > 0) {
+            message += '📌 <b>Активные задачи:</b>\n';
+            message += tasks.active.map((task, index) => 
+                formatTaskForList(task)
+            ).join('\n');
+        } else {
+            message += 'Нет активных задач\n';
+        }
 
-        const message =
-            '📋 Активные задачи:\n\n' +
-            (activeTasksList || 'Нет активных задач') +
-            '\n\n✅ Выполненные задачи:\n\n' +
-            (completedTasksList || 'Нет выполненных задач');
+        message += '\n';
 
-        ctx.reply(message, Markup.inlineKeyboard([
-            [Markup.button.callback('Изменить статус', 'change_status')],
-            [Markup.button.callback('Изменить дату', 'change_date'),
-            Markup.button.callback('Изменить категорию', 'change_category')],
-            [Markup.button.callback('Удалить', 'delete_task')]
-        ]));
+        if (tasks.completed.length > 0) {
+            message += '✅ <b>Выполненные задачи:</b>\n';
+            message += tasks.completed.map((task, index) => 
+                formatTaskForList(task)
+            ).join('\n');
+        } else {
+            message += 'Нет выполненных задач\n';
+        }
+
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('📝 Управление задачами', 'manage_tasks')],
+            [Markup.button.callback('➕ Добавить задачу', 'add_task')],
+            [Markup.button.callback('« Назад', 'back_to_menu')]
+        ]);
+
+        await ctx.reply(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
     } catch (error) {
         console.error('Ошибка при отображении списка задач:', error);
-        ctx.reply('Произошла ошибка при загрузке задач. Пожалуйста, попробуйте позже.');
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
     }
 }
+
+// Функция отображения списка задач для управления
+async function showTasksForManagement(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const tasks = await db.getUserTasks(user.user_id);
+        const keyboard = [];
+
+        // Добавляем активные задачи
+        if (tasks.active.length > 0) {
+            keyboard.push([Markup.button.callback('📋 Активные задачи:', 'ignore')]);
+            tasks.active.forEach(task => {
+                keyboard.push([
+                    Markup.button.callback(`📌 ${task.title}`, `view_task:${task.task_id}:active`)
+                ]);
+            });
+        }
+
+        // Добавляем выполненные задачи
+        if (tasks.completed.length > 0) {
+            keyboard.push([Markup.button.callback('✅ Выполненные задачи:', 'ignore')]);
+            tasks.completed.forEach(task => {
+                keyboard.push([
+                    Markup.button.callback(`✓ ${task.title}`, `view_task:${task.task_id}:completed`)
+                ]);
+            });
+        }
+
+        // Добавляем кнопку возврата
+        keyboard.push([Markup.button.callback('◀️ Назад', 'back_to_tasks')]);
+
+        ctx.reply('Выберите задачу для управления:', Markup.inlineKeyboard(keyboard));
+
+    } catch (error) {
+        console.error('Ошибка при отображении задач для управления:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+}
+
+// Функция отображения конкретной задачи
+async function showTaskDetails(ctx, taskId, status) {
+    try {
+        const task = await db.getTaskById(taskId);
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        // Загружаем категории перед отображением деталей
+        await loadCategories(task.user_id);
+
+        const category = categories[task.category_id] || { name: 'Без категории' };
+        const statusEmoji = task.status === 'completed' ? '✅' : '📝';
+
+        let message = `${statusEmoji} <b>${task.title}</b>\n\n`;
+        message += `🏷 Категория: ${category.name}\n`;
+        message += `📅 Срок: ${formatDate(task.due_date)}\n`;
+        
+        // Добавляем информацию об уведомлениях
+        if (task.notifications_enabled) {
+            const notificationTime = task.notification_time ? 
+                new Date(task.notification_time).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Не задано';
+            message += `🔔 Уведомление: ${notificationTime}\n`;
+        } else {
+            message += '🔕 Уведомления выключены\n';
+        }
+
+        const keyboard = Markup.inlineKeyboard([
+            [
+                Markup.button.callback('✏️ Изменить название', `edit_title:${taskId}`),
+                Markup.button.callback('📅 Изменить дату', `change_date:${taskId}`)
+            ],
+            [
+                Markup.button.callback('🏷 Изменить категорию', `change_category:${taskId}`),
+                Markup.button.callback('🔔 Настройка уведомлений', `notifications:${taskId}`)
+            ],
+            [
+                task.status === 'completed' 
+                    ? Markup.button.callback('↩️ Вернуть в активные', `uncomplete:${taskId}`)
+                    : Markup.button.callback('✅ Отметить выполненной', `complete:${taskId}`)
+            ],
+            [
+                Markup.button.callback('🗑 Удалить задачу', `delete:${taskId}`),
+                Markup.button.callback('« Назад', 'back_to_list')
+            ]
+        ]);
+
+        await ctx.reply(message, { 
+            parse_mode: 'HTML',
+            ...keyboard 
+        });
+    } catch (error) {
+        console.error('Ошибка при показе деталей задачи:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+}
+
+// Обработчики действий с задачами
+bot.action('manage_tasks', (ctx) => showTasksForManagement(ctx));
+bot.action('add_task', (ctx) => startAddingTask(ctx));
+bot.action('back_to_tasks', (ctx) => showTasksList(ctx));
+bot.action('back_to_task_list', (ctx) => showTasksForManagement(ctx));
+
+// Обработчик просмотра задачи
+bot.action(/^view_task:(\d+):(active|completed)$/, (ctx) => {
+    const [taskId, status] = ctx.match.slice(1);
+    showTaskDetails(ctx, taskId, status);
+});
+
+// Обработчики действий с конкретной задачей
+bot.action(/^edit_title:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    ctx.session = {
+        state: 'waiting_new_title',
+        taskId: taskId
+    };
+    ctx.reply('Введите новое название задачи:');
+});
+
+bot.action(/^edit_date:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    ctx.session = {
+        state: 'waiting_new_date',
+        taskId: taskId
+    };
+    const keyboard = createCalendarKeyboard();
+    ctx.reply('Выберите новую дату:', Markup.inlineKeyboard(keyboard));
+});
+
+bot.action(/^edit_category:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    const user = await db.getOrCreateUser(ctx.from.id, ctx.from.username, ctx.from.first_name, ctx.from.last_name);
+    const categories = await db.getUserCategories(user.user_id);
+    
+    const keyboard = categories.map(category => [
+        Markup.button.callback(category.name, `set_category:${taskId}:${category.category_id}`)
+    ]);
+    keyboard.push([Markup.button.callback('◀️ Назад', `view_task:${taskId}:active`)]);
+    
+    ctx.reply('Выберите новую категорию:', Markup.inlineKeyboard(keyboard));
+});
+
+bot.action(/^delete_task:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        await db.deleteTask(taskId, user.user_id);
+        ctx.reply('Задача удалена');
+        showTasksForManagement(ctx);
+    } catch (error) {
+        console.error('Ошибка при удалении задачи:', error);
+        ctx.reply('Произошла ошибка при удалении задачи');
+    }
+});
+
+bot.action(/^complete_task:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        // Получаем текущие задачи
+        const tasks = await db.getUserTasks(user.user_id);
+        const maxCompletedOrder = tasks.completed.reduce((max, task) => 
+            Math.max(max, task.order || 0), -1);
+
+        // Отмечаем задачу как выполненную и устанавливаем ей order = 0
+        await db.completeTask(taskId, user.user_id, 0);
+
+        // Сдвигаем порядок остальных выполненных задач
+        if (tasks.completed.length > 0) {
+            const updatePromises = tasks.completed.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        // Обновляем порядок оставшихся активных задач
+        const activeTask = tasks.active.find(t => t.task_id === parseInt(taskId));
+        if (activeTask) {
+            const tasksToUpdate = tasks.active.filter(t => 
+                (t.order || 0) > (activeTask.order || 0)
+            );
+            const updatePromises = tasksToUpdate.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) - 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        ctx.reply('Задача отмечена как выполненная');
+        showTasksForManagement(ctx);
+    } catch (error) {
+        console.error('Ошибка при выполнении задачи:', error);
+        ctx.reply('Произошла ошибка при выполнении задачи');
+    }
+});
+
+bot.action(/^uncomplete_task:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        // Получаем текущие задачи
+        const tasks = await db.getUserTasks(user.user_id);
+        const maxActiveOrder = tasks.active.reduce((max, task) => 
+            Math.max(max, task.order || 0), -1);
+
+        // Возвращаем задачу в активные и устанавливаем ей order = 0
+        await db.uncompleteTask(taskId, user.user_id, 0);
+
+        // Сдвигаем порядок остальных активных задач
+        if (tasks.active.length > 0) {
+            const updatePromises = tasks.active.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        // Обновляем порядок оставшихся выполненных задач
+        const completedTask = tasks.completed.find(t => t.task_id === parseInt(taskId));
+        if (completedTask) {
+            const tasksToUpdate = tasks.completed.filter(t => 
+                (t.order || 0) > (completedTask.order || 0)
+            );
+            const updatePromises = tasksToUpdate.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) - 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        ctx.reply('Задача возвращена в активные');
+        showTasksForManagement(ctx);
+    } catch (error) {
+        console.error('Ошибка при возврате задачи в активные:', error);
+        ctx.reply('Произошла ошибка при возврате задачи в активные');
+    }
+});
+
+bot.action(/^set_category:(\d+):(.+)$/, async (ctx) => {
+    const [taskId, categoryId] = ctx.match.slice(1);
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        await db.updateTaskCategory(taskId, categoryId, user.user_id);
+        showTaskDetails(ctx, taskId, 'active');
+    } catch (error) {
+        console.error('Ошибка при изменении категории:', error);
+        ctx.reply('Произошла ошибка при изменении категории');
+    }
+    await ctx.answerCbQuery();
+});
 
 // Функция отображения категорий
 async function showCategories(ctx) {
@@ -319,7 +633,7 @@ async function showStats(ctx) {
 
 // Обработчики текстовых сообщений
 bot.on('text', async (ctx) => {
-    if (!ctx.session) return;
+    if (!ctx.session?.state) return;
 
     try {
         const user = await db.getOrCreateUser(
@@ -341,6 +655,20 @@ bot.on('text', async (ctx) => {
                 ]);
                 await ctx.reply('Выберите категорию:', Markup.inlineKeyboard(categoryButtons));
                 ctx.session.state = 'waiting_category';
+                break;
+
+            case 'waiting_new_title':
+                const taskId = ctx.session.taskId;
+                const newTitle = ctx.message.text;
+
+                try {
+                    await db.updateTaskTitle(taskId, newTitle);
+                    ctx.session = {};
+                    showTaskDetails(ctx, taskId, 'active');
+                } catch (error) {
+                    console.error('Ошибка при обновлении названия задачи:', error);
+                    ctx.reply('Произошла ошибка при обновлении названия задачи');
+                }
                 break;
 
             case 'waiting_category_name':
@@ -378,51 +706,6 @@ bot.on('text', async (ctx) => {
                 
                 delete ctx.session;
                 break;
-
-            case 'waiting_date':
-                const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
-                const match = ctx.message.text.match(dateRegex);
-
-                if (match) {
-                    const [_, day, month, year] = match;
-                    const date = new Date(year, month - 1, day);
-                    
-                    const task = await db.createTask(
-                        ctx.session.newTask.userId,
-                        ctx.session.newTask.title,
-                        ctx.session.newTask.category,
-                        date.toISOString()
-                    );
-
-                    await ctx.reply('Задача успешно добавлена! 👍');
-                    delete ctx.session;
-                } else {
-                    await ctx.reply('Неверный формат даты. Пожалуйста, используйте формат ДД.ММ.ГГГГ');
-                }
-                break;
-
-            case 'waiting_change_status_number':
-                try {
-                    const taskIndex = parseInt(ctx.message.text) - 1;
-                    if (taskIndex >= 0 && taskIndex < ctx.session.tasks.length) {
-                        const task = ctx.session.tasks[taskIndex];
-                        if (ctx.session.taskType === 'active') {
-                            await db.completeTask(task.task_id, user.user_id);
-                            await ctx.reply('Задача отмечена как выполненная! ✅');
-                        } else {
-                            await db.uncompleteTask(task.task_id, user.user_id);
-                            await ctx.reply('Задача отмечена как активная! ↩️');
-                        }
-                        await showTasksList(ctx);
-                    } else {
-                        await ctx.reply('Неверный номер задачи.');
-                    }
-                    delete ctx.session;
-                } catch (error) {
-                    console.error('Ошибка при изменении статуса задачи:', error);
-                    ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
-                }
-                break;
         }
     } catch (error) {
         console.error('Ошибка при обработке текстового сообщения:', error);
@@ -430,8 +713,8 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// Обработчики inline кнопок
-bot.action(/select_category:(.+)/, async (ctx) => {
+// Обработчик выбора категории для новой задачи
+bot.action(/^select_category:(.+)$/, async (ctx) => {
     try {
         if (ctx.session?.state === 'waiting_category') {
             ctx.session.newTask.category = ctx.match[1];
@@ -604,10 +887,10 @@ bot.action(/show_category:(.+)/, async (ctx) => {
     await ctx.answerCbQuery();
 });
 
-// Обработчик выбора даты
-bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
+// Обработчик выбора даты из календаря
+bot.action(/^select_date:(\d+):(\d+):(\d+)$/, async (ctx) => {
     try {
-        if (!ctx.session) return;
+        if (ctx.session?.state !== 'waiting_date') return;
 
         const user = await db.getOrCreateUser(
             ctx.from.id,
@@ -616,57 +899,95 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
             ctx.from.last_name
         );
 
-        if (ctx.session.state === 'waiting_date') {
-            // Логика создания новой задачи
-            const match = ctx.match[1];
-            let dueDate = null;
+        const [year, month, day] = ctx.match.slice(1).map(Number);
+        const date = new Date(year, month, day);
+        date.setHours(12, 0, 0, 0);
+        const dueDate = date.toISOString();
 
-            if (match !== 'no_date') {
-                const [year, month, day] = match.split(':').map(Number);
-                const date = new Date(year, month, day);
-                date.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
-                dueDate = date.toISOString();
-            }
-
-            const task = await db.createTask(
-                ctx.session.newTask.userId,
-                ctx.session.newTask.title,
-                ctx.session.newTask.category,
-                dueDate
+        // Получаем текущие активные задачи для определения порядка
+        const tasks = await db.getUserTasks(user.user_id);
+        
+        // Сдвигаем порядок существующих задач
+        if (tasks.active.length > 0) {
+            const updatePromises = tasks.active.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
             );
-
-            const categories = await db.getUserCategories(ctx.session.newTask.userId);
-            const category = categories.find(c => c.category_id === ctx.session.newTask.category);
-
-            await ctx.editMessageText(
-                'Задача успешно добавлена! 👍\n' +
-                `Название: ${task.title}\n` +
-                `Категория: ${category ? category.name : 'Без категории'}\n` +
-                `Дата: ${formatDate(task.due_date)}`
-            );
-        } else if (ctx.session.state === 'waiting_new_date' && ctx.session.taskToChange) {
-            // Логика изменения даты существующей задачи
-            const match = ctx.match[1];
-            let dueDate = null;
-
-            if (match !== 'no_date') {
-                const [year, month, day] = match.split(':').map(Number);
-                const date = new Date(year, month, day);
-                date.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
-                dueDate = date.toISOString();
-            }
-
-            await db.updateTaskDate(ctx.session.taskToChange, user.user_id, dueDate);
-            await ctx.editMessageText('Дата задачи успешно изменена! 📅');
-            await showTasksList(ctx);
+            await Promise.all(updatePromises);
         }
+
+        // Создаем задачу с порядком 0 (в начале списка)
+        const task = await db.createTask(
+            user.user_id,
+            ctx.session.newTask.title,
+            ctx.session.newTask.category,
+            dueDate,
+            0 // Устанавливаем order = 0 для новой задачи
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+        await ctx.editMessageText(
+            'Задача успешно добавлена! 👍\n' +
+            `Название: ${task.title}\n` +
+            `Категория: ${category ? category.name : 'Без категории'}\n` +
+            `Дата: ${formatDate(task.due_date)}`
+        );
 
         delete ctx.session;
     } catch (error) {
-        console.error('Ошибка при обработке даты:', error);
-        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+        console.error('Ошибка при создании задачи:', error);
+        ctx.reply('Произошла ошибка при создании задачи');
     }
-    await ctx.answerCbQuery();
+});
+
+// Обработчик выбора "Без даты"
+bot.action('select_date:no_date', async (ctx) => {
+    try {
+        if (ctx.session?.state !== 'waiting_date') return;
+
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        // Получаем текущие активные задачи для определения порядка
+        const tasks = await db.getUserTasks(user.user_id);
+        
+        // Сдвигаем порядок существующих задач
+        if (tasks.active.length > 0) {
+            const updatePromises = tasks.active.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        // Создаем задачу с порядком 0 (в начале списка)
+        const task = await db.createTask(
+            user.user_id,
+            ctx.session.newTask.title,
+            ctx.session.newTask.category,
+            null,
+            0 // Устанавливаем order = 0 для новой задачи
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+        await ctx.editMessageText(
+            'Задача успешно добавлена! 👍\n' +
+            `Название: ${task.title}\n` +
+            `Категория: ${category ? category.name : 'Без категории'}\n` +
+            'Дата: Без срока'
+        );
+
+        delete ctx.session;
+    } catch (error) {
+        console.error('Ошибка при создании задачи:', error);
+        ctx.reply('Произошла ошибка при создании задачи');
+    }
 });
 
 // Обработчик изменения категории задачи
@@ -756,6 +1077,109 @@ bot.action(/select_date:(no_date|(\d+):(\d+):(\d+))/, async (ctx) => {
     await ctx.answerCbQuery();
 });
 
+// Обработчик выбора даты для новой задачи
+bot.action(/^select_date:(\d+):(\d+):(\d+)$/, async (ctx) => {
+    try {
+        if (ctx.session?.state !== 'waiting_date') return;
+
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const [year, month, day] = ctx.match.slice(1).map(Number);
+        const date = new Date(year, month, day);
+        date.setHours(12, 0, 0, 0);
+        const dueDate = date.toISOString();
+
+        // Получаем текущие активные задачи для определения порядка
+        const tasks = await db.getUserTasks(user.user_id);
+        
+        // Сдвигаем порядок существующих задач
+        if (tasks.active.length > 0) {
+            const updatePromises = tasks.active.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        // Создаем задачу с порядком 0 (в начале списка)
+        const task = await db.createTask(
+            user.user_id,
+            ctx.session.newTask.title,
+            ctx.session.newTask.category,
+            dueDate,
+            0 // Устанавливаем order = 0 для новой задачи
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+        await ctx.editMessageText(
+            'Задача успешно добавлена! 👍\n' +
+            `Название: ${task.title}\n` +
+            `Категория: ${category ? category.name : 'Без категории'}\n` +
+            `Дата: ${formatDate(task.due_date)}`
+        );
+
+        delete ctx.session;
+    } catch (error) {
+        console.error('Ошибка при создании задачи:', error);
+        ctx.reply('Произошла ошибка при создании задачи');
+    }
+});
+
+// Обработчик выбора "Без даты" для новой задачи
+bot.action('select_date:no_date', async (ctx) => {
+    try {
+        if (ctx.session?.state !== 'waiting_date') return;
+
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        // Получаем текущие активные задачи для определения порядка
+        const tasks = await db.getUserTasks(user.user_id);
+        
+        // Сдвигаем порядок существующих задач
+        if (tasks.active.length > 0) {
+            const updatePromises = tasks.active.map(t => 
+                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            );
+            await Promise.all(updatePromises);
+        }
+
+        // Создаем задачу с порядком 0 (в начале списка)
+        const task = await db.createTask(
+            user.user_id,
+            ctx.session.newTask.title,
+            ctx.session.newTask.category,
+            null,
+            0 // Устанавливаем order = 0 для новой задачи
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+        await ctx.editMessageText(
+            'Задача успешно добавлена! 👍\n' +
+            `Название: ${task.title}\n` +
+            `Категория: ${category ? category.name : 'Без категории'}\n` +
+            'Дата: Без срока'
+        );
+
+        delete ctx.session;
+    } catch (error) {
+        console.error('Ошибка при создании задачи:', error);
+        ctx.reply('Произошла ошибка при создании задачи');
+    }
+});
+
 // Функция для генерации ID категории
 function generateCategoryId() {
     const timestamp = Date.now().toString(36);
@@ -775,3 +1199,394 @@ process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM')); 
 
 module.exports = bot; 
+
+function formatTaskForList(task, showButtons = true) {
+    const statusEmoji = task.status === 'completed' ? '✅' : '📝';
+    const category = categories[task.category_id] || { name: 'Без категории' };
+    
+    let text = `${statusEmoji} <b>${task.title}</b>\n`;
+    text += `🏷 Категория: ${category.name}\n`;
+    text += `📅 Срок: ${formatDate(task.due_date)}\n`;
+    
+    // Добавляем информацию об уведомлениях
+    if (task.notifications_enabled) {
+        const notificationTime = task.notification_time ? 
+            new Date(task.notification_time).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'Не задано';
+        text += `🔔 Уведомление: ${notificationTime}\n`;
+    } else {
+        text += '🔕 Уведомления выключены\n';
+    }
+
+    return text;
+}
+
+// Обработчик кнопки настройки уведомлений
+bot.action(/^notifications:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        const task = await db.getTaskById(taskId);
+        
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        // Загружаем категории
+        await loadCategories(task.user_id);
+
+        // Если задача выполнена, уведомления настраивать нельзя
+        if (task.status === 'completed') {
+            await ctx.answerCbQuery('Нельзя настроить уведомления для выполненной задачи');
+            return;
+        }
+
+        const keyboard = Markup.inlineKeyboard([
+            [
+                Markup.button.callback(
+                    task.notifications_enabled ? '🔕 Выключить уведомления' : '🔔 Включить уведомления',
+                    `toggle_notifications:${taskId}`
+                )
+            ],
+            task.notifications_enabled ? [
+                Markup.button.callback('⏰ Установить время', `set_notification_time:${taskId}`)
+            ] : [],
+            [Markup.button.callback('« Назад', `show_task:${taskId}`)]
+        ]);
+
+        let message = '🔔 <b>Настройка уведомлений</b>\n\n';
+        message += `Задача: ${task.title}\n`;
+        if (task.notifications_enabled) {
+            const notificationTime = task.notification_time ? 
+                new Date(task.notification_time).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Не задано';
+            message += `Текущее время уведомления: ${notificationTime}`;
+        } else {
+            message += 'Уведомления выключены';
+        }
+
+        await ctx.editMessageText(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
+    } catch (error) {
+        console.error('Ошибка при настройке уведомлений:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+});
+
+// Обработчик включения/выключения уведомлений
+bot.action(/^toggle_notifications:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        const task = await db.getTaskById(taskId);
+        
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        const newState = !task.notifications_enabled;
+        let notificationTime = null;
+
+        // Если включаем уведомления и у задачи есть дата, устанавливаем время на 8:00
+        if (newState && task.due_date) {
+            const date = new Date(task.due_date);
+            date.setHours(8, 0, 0, 0);
+            notificationTime = date.toISOString();
+        }
+
+        await db.updateTaskNotifications(taskId, {
+            notifications_enabled: newState,
+            notification_time: notificationTime
+        });
+
+        await ctx.answerCbQuery(newState ? 'Уведомления включены' : 'Уведомления выключены');
+
+        // Показываем обновленные настройки уведомлений
+        const updatedTask = await db.getTaskById(taskId);
+        await loadCategories(updatedTask.user_id);
+
+        let message = '🔔 <b>Настройка уведомлений</b>\n\n';
+        message += `Задача: ${updatedTask.title}\n`;
+        if (updatedTask.notifications_enabled) {
+            const notificationTime = updatedTask.notification_time ? 
+                new Date(updatedTask.notification_time).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Не задано';
+            message += `Текущее время уведомления: ${notificationTime}`;
+        } else {
+            message += 'Уведомления выключены';
+        }
+
+        const keyboard = Markup.inlineKeyboard([
+            [
+                Markup.button.callback(
+                    updatedTask.notifications_enabled ? '🔕 Выключить уведомления' : '🔔 Включить уведомления',
+                    `toggle_notifications:${taskId}`
+                )
+            ],
+            updatedTask.notifications_enabled ? [
+                Markup.button.callback('⏰ Установить время', `set_notification_time:${taskId}`)
+            ] : [],
+            [Markup.button.callback('« Назад', `show_task:${taskId}`)]
+        ]);
+
+        await ctx.editMessageText(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
+    } catch (error) {
+        console.error('Ошибка при изменении состояния уведомлений:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+});
+
+// Обработчик кнопки установки времени уведомления
+bot.action(/^set_notification_time:(\d+)$/, async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        const taskId = ctx.match[1];
+        const task = await db.getTaskById(taskId);
+
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        // Устанавливаем состояние сессии для выбора даты
+        ctx.session = {
+            state: 'selecting_notification_date',
+            taskId: taskId
+        };
+
+        let message = '📅 <b>Установка уведомления</b>\n\n';
+        message += 'Выберите дату уведомления:';
+
+        // Создаем календарь для выбора даты
+        const keyboard = createCalendarKeyboard(null, true);
+
+        await ctx.reply(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
+    } catch (error) {
+        console.error('Ошибка при запросе даты уведомления:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+});
+
+// Обработчик выбора даты из календаря для уведомления
+bot.action(/^select_notification_date:(.+)$/, async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        const selectedDate = ctx.match[1];
+        const taskId = ctx.session?.taskId;
+
+        if (!taskId) {
+            ctx.reply('Ошибка: не найден идентификатор задачи');
+            return;
+        }
+
+        const task = await db.getTaskById(taskId);
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        // Проверяем, что выбранная дата не в прошлом
+        const selectedDateTime = new Date(selectedDate);
+        const now = new Date();
+        if (selectedDateTime < now) {
+            ctx.reply(
+                'Нельзя установить уведомление на прошедшую дату.\n' +
+                'Пожалуйста, выберите будущую дату.'
+            );
+            return;
+        }
+
+        // Проверяем, что дата не позже срока задачи
+        if (task.due_date && selectedDateTime > new Date(task.due_date)) {
+            ctx.reply(
+                'Дата уведомления не может быть позже срока задачи.\n' +
+                `Срок задачи: ${formatDate(task.due_date)}`
+            );
+            return;
+        }
+
+        // Сохраняем выбранную дату и переходим к вводу времени
+        ctx.session = {
+            state: 'entering_notification_time',
+            taskId: taskId,
+            selectedDate: selectedDate
+        };
+
+        let message = '⏰ <b>Установка времени уведомления</b>\n\n';
+        message += `Выбранная дата: ${formatDate(selectedDate)}\n\n`;
+        message += 'Введите время в формате ЧЧ:ММ\n';
+        message += 'Например: 08:00';
+
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('« Отмена', `show_task:${taskId}`)]
+        ]);
+
+        await ctx.reply(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
+    } catch (error) {
+        console.error('Ошибка при выборе даты уведомления:', error);
+        ctx.reply('Произошла ошибка. Пожалуйста, попробуйте позже.');
+    }
+});
+
+// Обработчик ввода времени уведомления
+bot.hears(/^([0-9]{1,2}):([0-9]{1,2})$/, async (ctx) => {
+    if (!ctx.session?.state || ctx.session.state !== 'entering_notification_time') return;
+
+    try {
+        const taskId = ctx.session.taskId;
+        const selectedDate = ctx.session.selectedDate;
+        const task = await db.getTaskById(taskId);
+        
+        if (!task) {
+            ctx.reply('Задача не найдена');
+            return;
+        }
+
+        // Парсим время
+        const [_, hours, minutes] = ctx.match;
+        const hoursNum = parseInt(hours);
+        const minutesNum = parseInt(minutes);
+
+        if (hoursNum < 0 || hoursNum > 23 || minutesNum < 0 || minutesNum > 59) {
+            ctx.reply(
+                'Указано некорректное время.\n' +
+                'Часы: от 00 до 23\n' +
+                'Минуты: от 00 до 59'
+            );
+            return;
+        }
+
+        // Создаем дату уведомления
+        const notificationTime = new Date(selectedDate);
+        notificationTime.setHours(hoursNum, minutesNum, 0, 0);
+
+        // Проверяем, что время не в прошлом
+        const now = new Date();
+        if (notificationTime < now) {
+            ctx.reply(
+                'Нельзя установить уведомление на прошедшее время.\n' +
+                'Пожалуйста, укажите будущее время.'
+            );
+            return;
+        }
+
+        // Обновляем настройки уведомлений
+        const updatedTask = await db.updateTaskNotifications(taskId, {
+            notifications_enabled: true,
+            notification_time: notificationTime.toISOString()
+        });
+
+        if (!updatedTask) {
+            throw new Error('Не удалось обновить настройки уведомлений');
+        }
+
+        // Очищаем состояние сессии
+        ctx.session = {};
+
+        // Показываем сообщение об успехе и обновленные настройки
+        await ctx.reply('✅ Время уведомления успешно установлено');
+
+        // Показываем обновленные настройки уведомлений
+        let message = '🔔 <b>Настройка уведомлений</b>\n\n';
+        message += `Задача: ${task.title}\n`;
+        message += `Установлено уведомление на: ${notificationTime.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}`;
+
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('🔕 Выключить уведомления', `toggle_notifications:${taskId}`)],
+            [Markup.button.callback('⏰ Изменить время', `set_notification_time:${taskId}`)],
+            [Markup.button.callback('« Назад к задаче', `show_task:${taskId}`)]
+        ]);
+
+        await ctx.reply(message, {
+            parse_mode: 'HTML',
+            ...keyboard
+        });
+    } catch (error) {
+        console.error('Ошибка при установке времени уведомления:', error);
+        ctx.reply(
+            'Произошла ошибка при установке уведомления.\n' +
+            'Пожалуйста, попробуйте еще раз или вернитесь к задаче.'
+        );
+    }
+});
+
+// Обработчик кнопки "Назад" в главное меню
+bot.action('back_to_menu', async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        const keyboard = Markup.keyboard([
+            ['➕ Добавить задачу'],
+            ['🏷 Категории', '📊 Статистика'],
+            ['❓ Помощь']
+        ]).resize();
+
+        await ctx.reply('Выберите действие:', keyboard);
+    } catch (error) {
+        console.error('Ошибка при возврате в главное меню:', error);
+    }
+});
+
+// Обработчик кнопки "Назад" к списку задач
+bot.action('back_to_list', async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        await showTasksList(ctx);
+    } catch (error) {
+        console.error('Ошибка при возврате к списку задач:', error);
+    }
+});
+
+// Обработчик кнопки "Назад" к деталям задачи
+bot.action(/^show_task:(\d+)$/, async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        const taskId = ctx.match[1];
+        await showTaskDetails(ctx, taskId);
+    } catch (error) {
+        console.error('Ошибка при возврате к деталям задачи:', error);
+    }
+});
+
+// Обработчик неправильного формата времени
+bot.on('text', async (ctx) => {
+    if (!ctx.session?.state || ctx.session.state !== 'entering_notification_time') return;
+
+    // Если мы здесь, значит формат времени был неправильным
+    ctx.reply(
+        'Неверный формат времени.\n' +
+        'Используйте формат ЧЧ:ММ\n' +
+        'Например: 08:00 или 14:30'
+    );
+}); 
