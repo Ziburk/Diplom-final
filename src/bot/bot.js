@@ -122,8 +122,8 @@ function createCalendarKeyboard(selectedDate = null, isNotification = false) {
         date.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения
         const dateStr = date.toISOString();
         
-        // Определяем, активна ли кнопка (теперь разрешаем выбор сегодняшнего дня)
-        const isDisabled = date < today;
+        // Определяем, активна ли кнопка (теперь разрешаем выбор текущего дня)
+        const isDisabled = date < today && date.getTime() !== today.getTime(); // Разрешаем выбор текущей даты
         const displayDay = day.toString().padStart(2, '0');
         
         if (isDisabled) {
@@ -165,7 +165,7 @@ bot.command('start', async (ctx) => {
         );
 
         const keyboard = Markup.keyboard([
-            ['➕ Добавить задачу'],
+            ['➕ Добавить задачу', '📋 Список задач'],
             ['🏷 Категории', '📊 Статистика'],
             ['❓ Помощь']
         ]).resize();
@@ -705,6 +705,96 @@ bot.on('text', async (ctx) => {
                 }
                 
                 delete ctx.session;
+                break;
+
+            case 'entering_notification_time':
+                const timeInput = ctx.message.text.trim();
+                const timeMatch = timeInput.match(/^(\d{1,2}):(\d{1,2})$/);
+
+                if (!timeMatch) {
+                    await ctx.reply(
+                        'Неверный формат времени!\n' +
+                        'Пожалуйста, используйте формат ЧЧ:ММ\n' +
+                        'Например: 08:00 или 14:30'
+                    );
+                    return;
+                }
+
+                const notificationTaskId = ctx.session.taskId;
+                const selectedDate = ctx.session.selectedDate;
+                const task = await db.getTaskById(notificationTaskId);
+                
+                if (!task) {
+                    ctx.reply('Задача не найдена');
+                    return;
+                }
+
+                // Парсим время
+                const [_, hours, minutes] = timeMatch;
+                const hoursNum = parseInt(hours);
+                const minutesNum = parseInt(minutes);
+
+                if (hoursNum < 0 || hoursNum > 23 || minutesNum < 0 || minutesNum > 59) {
+                    await ctx.reply(
+                        'Указано некорректное время.\n' +
+                        'Часы: от 00 до 23\n' +
+                        'Минуты: от 00 до 59'
+                    );
+                    return;
+                }
+
+                // Создаем дату уведомления
+                const notificationTime = new Date(selectedDate);
+                notificationTime.setHours(hoursNum, minutesNum, 0, 0);
+
+                // Проверяем, что время не в прошлом
+                const now = new Date();
+                if (notificationTime < now) {
+                    await ctx.reply(
+                        'Нельзя установить уведомление на прошедшее время.\n' +
+                        'Пожалуйста, укажите будущее время.'
+                    );
+                    return;
+                }
+
+                // Обновляем настройки уведомлений
+                const updatedTask = await db.updateTaskNotifications(notificationTaskId, {
+                    notifications_enabled: true,
+                    notification_time: notificationTime.toISOString(),
+                    notification_sent: false // Сбрасываем флаг отправки уведомления
+                });
+
+                if (!updatedTask) {
+                    throw new Error('Не удалось обновить настройки уведомлений');
+                }
+
+                // Очищаем состояние сессии
+                ctx.session = {};
+
+                // Показываем сообщение об успехе и обновленные настройки
+                await ctx.reply('✅ Время уведомления успешно установлено');
+
+                // Показываем обновленные настройки уведомлений
+                let message = '🔔 <b>Настройка уведомлений</b>\n\n';
+                message += `Задача: ${task.title}\n`;
+                message += `Установлено уведомление на: ${notificationTime.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}`;
+
+                const keyboard = Markup.inlineKeyboard([
+                    [Markup.button.callback('🔕 Выключить уведомления', `toggle_notifications:${notificationTaskId}`)],
+                    [Markup.button.callback('⏰ Изменить время', `set_notification_time:${notificationTaskId}`)],
+                    [Markup.button.callback('« Назад к задаче', `show_task:${notificationTaskId}`)]
+                ]);
+
+                await ctx.reply(message, {
+                    parse_mode: 'HTML',
+                    ...keyboard
+                });
                 break;
         }
     } catch (error) {
@@ -1411,7 +1501,12 @@ bot.action(/^select_notification_date:(.+)$/, async (ctx) => {
         // Проверяем, что выбранная дата не в прошлом
         const selectedDateTime = new Date(selectedDate);
         const now = new Date();
-        if (selectedDateTime < now) {
+        
+        // Сбрасываем время до начала дня для корректного сравнения дат
+        const selectedDateStart = new Date(selectedDateTime.getFullYear(), selectedDateTime.getMonth(), selectedDateTime.getDate());
+        const nowDateStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (selectedDateStart < nowDateStart) {
             ctx.reply(
                 'Нельзя установить уведомление на прошедшую дату.\n' +
                 'Пожалуйста, выберите будущую дату.'
@@ -1454,100 +1549,12 @@ bot.action(/^select_notification_date:(.+)$/, async (ctx) => {
     }
 });
 
-// Обработчик ввода времени уведомления
-bot.hears(/^([0-9]{1,2}):([0-9]{1,2})$/, async (ctx) => {
-    if (!ctx.session?.state || ctx.session.state !== 'entering_notification_time') return;
-
-    try {
-        const taskId = ctx.session.taskId;
-        const selectedDate = ctx.session.selectedDate;
-        const task = await db.getTaskById(taskId);
-        
-        if (!task) {
-            ctx.reply('Задача не найдена');
-            return;
-        }
-
-        // Парсим время
-        const [_, hours, minutes] = ctx.match;
-        const hoursNum = parseInt(hours);
-        const minutesNum = parseInt(minutes);
-
-        if (hoursNum < 0 || hoursNum > 23 || minutesNum < 0 || minutesNum > 59) {
-            ctx.reply(
-                'Указано некорректное время.\n' +
-                'Часы: от 00 до 23\n' +
-                'Минуты: от 00 до 59'
-            );
-            return;
-        }
-
-        // Создаем дату уведомления
-        const notificationTime = new Date(selectedDate);
-        notificationTime.setHours(hoursNum, minutesNum, 0, 0);
-
-        // Проверяем, что время не в прошлом
-        const now = new Date();
-        if (notificationTime < now) {
-            ctx.reply(
-                'Нельзя установить уведомление на прошедшее время.\n' +
-                'Пожалуйста, укажите будущее время.'
-            );
-            return;
-        }
-
-        // Обновляем настройки уведомлений
-        const updatedTask = await db.updateTaskNotifications(taskId, {
-            notifications_enabled: true,
-            notification_time: notificationTime.toISOString()
-        });
-
-        if (!updatedTask) {
-            throw new Error('Не удалось обновить настройки уведомлений');
-        }
-
-        // Очищаем состояние сессии
-        ctx.session = {};
-
-        // Показываем сообщение об успехе и обновленные настройки
-        await ctx.reply('✅ Время уведомления успешно установлено');
-
-        // Показываем обновленные настройки уведомлений
-        let message = '🔔 <b>Настройка уведомлений</b>\n\n';
-        message += `Задача: ${task.title}\n`;
-        message += `Установлено уведомление на: ${notificationTime.toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })}`;
-
-        const keyboard = Markup.inlineKeyboard([
-            [Markup.button.callback('🔕 Выключить уведомления', `toggle_notifications:${taskId}`)],
-            [Markup.button.callback('⏰ Изменить время', `set_notification_time:${taskId}`)],
-            [Markup.button.callback('« Назад к задаче', `show_task:${taskId}`)]
-        ]);
-
-        await ctx.reply(message, {
-            parse_mode: 'HTML',
-            ...keyboard
-        });
-    } catch (error) {
-        console.error('Ошибка при установке времени уведомления:', error);
-        ctx.reply(
-            'Произошла ошибка при установке уведомления.\n' +
-            'Пожалуйста, попробуйте еще раз или вернитесь к задаче.'
-        );
-    }
-});
-
 // Обработчик кнопки "Назад" в главное меню
 bot.action('back_to_menu', async (ctx) => {
     try {
         await ctx.answerCbQuery();
         const keyboard = Markup.keyboard([
-            ['➕ Добавить задачу'],
+            ['➕ Добавить задачу', '📋 Список задач'],
             ['🏷 Категории', '📊 Статистика'],
             ['❓ Помощь']
         ]).resize();
@@ -1577,16 +1584,4 @@ bot.action(/^show_task:(\d+)$/, async (ctx) => {
     } catch (error) {
         console.error('Ошибка при возврате к деталям задачи:', error);
     }
-});
-
-// Обработчик неправильного формата времени
-bot.on('text', async (ctx) => {
-    if (!ctx.session?.state || ctx.session.state !== 'entering_notification_time') return;
-
-    // Если мы здесь, значит формат времени был неправильным
-    ctx.reply(
-        'Неверный формат времени.\n' +
-        'Используйте формат ЧЧ:ММ\n' +
-        'Например: 08:00 или 14:30'
-    );
 }); 

@@ -25,6 +25,7 @@ const notificationService = {
                         SELECT 1 
                         FROM notification_history nh 
                         WHERE nh.task_id = t.task_id
+                            AND nh.sent_at > NOW()
                     )
             `;
 
