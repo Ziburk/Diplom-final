@@ -1,6 +1,5 @@
 -- Удаление существующих таблиц, если они есть
 DROP TABLE IF EXISTS notification_history CASCADE;
-DROP TABLE IF EXISTS notification_settings CASCADE;
 DROP TABLE IF EXISTS tasks CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS telegram_users CASCADE;
@@ -40,17 +39,9 @@ CREATE TABLE tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
     "order" INTEGER,
+    notifications_enabled BOOLEAN DEFAULT false,
+    notification_time TIMESTAMP WITH TIME ZONE,
     FOREIGN KEY (category_id, user_id) REFERENCES categories(category_id, user_id) ON DELETE SET NULL
-);
-
--- Создание таблицы настроек уведомлений
-CREATE TABLE notification_settings (
-    setting_id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES telegram_users(user_id) ON DELETE CASCADE,
-    notification_type VARCHAR(20) CHECK (notification_type IN ('day_before', 'hour_before', 'custom')),
-    custom_minutes INTEGER,
-    is_enabled BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Создание таблицы истории уведомлений
@@ -68,7 +59,7 @@ CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_category_id ON tasks(category_id);
 CREATE INDEX idx_tasks_due_date ON tasks(due_date);
 CREATE INDEX idx_tasks_status ON tasks(status);
-CREATE INDEX idx_notification_settings_user_id ON notification_settings(user_id);
+CREATE INDEX idx_tasks_notification ON tasks(notification_time) WHERE notifications_enabled = true;
 CREATE INDEX idx_telegram_users_chat_id ON telegram_users(telegram_chat_id);
 CREATE INDEX idx_categories_user_id ON categories(user_id);
 

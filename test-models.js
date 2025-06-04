@@ -70,18 +70,12 @@ async function testModels() {
         const completedTask = await Task.changeStatus(task.task_id, testUser.user_id, 'completed');
         console.log('\nЗадача отмечена как выполненная:', completedTask);
 
-        // 4. Тестируем уведомления
-        console.log('\n4. Тестирование Notification модели:');
-        
-        // Создаем настройку уведомлений
-        const notificationSetting = await Notification.createSetting(testUser.user_id, {
-            notification_type: 'hour_before'
+        // Тестируем уведомления в задачах
+        const taskWithNotification = await Task.updateNotifications(task.task_id, testUser.user_id, {
+            notifications_enabled: true,
+            notification_time: new Date()
         });
-        console.log('Создана настройка уведомлений:', notificationSetting);
-
-        // Получаем задачи для уведомлений
-        const tasksForNotification = await Notification.getTasksForNotification();
-        console.log('Задачи для уведомлений:', tasksForNotification);
+        console.log('Обновлены настройки уведомлений задачи:', taskWithNotification);
 
         console.log('\nТестирование завершено успешно!');
 
