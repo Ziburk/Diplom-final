@@ -132,37 +132,31 @@ table {
 
 .header {
   min-height: 71px;
-  background-color: #FFF;
-  display: -webkit-box;
-  display: -ms-flexbox;
+  background-color: #1976D2;
   display: flex;
-  -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 .header-wrapper {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
 }
+
 .header-logo {
-  height: 65px;
+  height: 50px;
   width: auto;
-  margin: 0 0 0 50px;
+  margin-right: 15px;
 }
+
 .header-title {
   font-size: 22px;
   line-height: 1.28;
   font-weight: 700;
-  font-style: normal;
-  margin: 0 0 0 15px;
-  text-transform: uppercase;
+  color: #fff;
+  margin: 0;
 }
 
 .profile-link {
@@ -1154,4 +1148,54 @@ body {
 
 .hidden {
   display: none;
+}
+
+.profile-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    background-color: #fff;
+}
+
+.user-name {
+    color: #fff;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+}
+
+.logout-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.logout-icon {
+    width: 20px;
+    height: 20px;
+    color: #fff;
 }

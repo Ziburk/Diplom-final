@@ -1,4 +1,7 @@
 import '@toast-ui/editor/dist/toastui-editor.css';
+import { Editor } from '@toast-ui/editor';
+import Chart from 'chart.js/auto';
+import todoAPI from './api.js';
 
 //-----------------------------------------------------------------------------------
 // Переменные и константы
@@ -9,30 +12,8 @@ let tasks = {
     completed: []   //массив выполненных задач
 };
 
-// Объект со стандартными категориями задач, которые будут при первом открытии
-let categories = {
-    // Категорию 'other' нельзя редактировать
-    'other': {
-        id: 'other',        // поле с уникальным id категории
-        name: 'Общее',      // поле с именем, которое будет отображаться
-        color: '#607D8B'    // поле с цветом категории
-    },
-    'work': {
-        id: 'work',
-        name: 'Работа',
-        color: '#FF5252'
-    },
-    'personal': {
-        id: 'personal',
-        name: 'Личное',
-        color: '#69F0AE'
-    },
-    'shopping': {
-        id: 'shopping',
-        name: 'Покупки',
-        color: '#448AFF'
-    }
-};
+// Объект для хранения категорий
+let categories = {};
 
 // Переменная для списка активных редакторов текста
 let activeEditors = {};
@@ -100,124 +81,151 @@ const EXPORT_PRODUCTIVITY_TYPES = {
 // Функции
 
 // Главная функция всей программы. Инициализация компонентов и присваивание событий
-const init = () => {
-    loadCategories(); // Загружаем категории
-    loadTasks(); // Загружаем задачи
-    initTabs(); // Инициализация вкладок
-    setupDragAndDrop(); // Инициализация логики перетаскивания задач
+const init = async () => {
+    try {
+        // Проверяем авторизацию
+        const token = localStorage.getItem('auth_token');
+        const savedUser = localStorage.getItem('telegramUser');
+        
+        if (!token || !savedUser) {
+            window.location.href = '/login.html';
+            return;
+        }
 
-    // Добавляем обработчик кнопке управления категория
-    document.querySelector('.category-manager-btn').addEventListener('click', showCategoryManager);
+        // Проверяем валидность токена
+        try {
+            const response = await fetch('/api/auth/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Токен недействителен');
+            }
 
-    // Добавляем обработчик для фильтра списка категорий
-    document.getElementById('category-filter').addEventListener('change', (e) => {
-        currentCategoryFilter = e.target.value;
-        renderTasks(); // Отбор подходящих задач
-    });
+            // Обновляем UI для авторизованного пользователя
+            updateUIForLoggedInUser(JSON.parse(savedUser));
+        } catch (error) {
+            console.error('Ошибка проверки токена:', error);
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Загружаем данные
+        await loadCategories();
+        await loadTasks();
+        
+        initTabs();
+        setupDragAndDrop();
 
-    // Добавляем обработчик состояния задач (Активные/Завершенные)
-    document.querySelectorAll('input[name="status"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            currentStatusFilter = e.target.value;
+        // Добавляем обработчики событий
+        // Кнопка добавления задачи
+        document.querySelector('.add-task-button').addEventListener('click', addTask);
+
+        // Кнопка экспорта в PDF
+        document.querySelector('.export-button').addEventListener('click', initExportModal);
+
+        // Кнопка управления категориями
+        document.getElementById('category-manager-btn').addEventListener('click', showCategoryManager);
+
+        // Обработчики для фильтров
+        document.getElementById('category-filter').addEventListener('change', () => {
+            currentCategoryFilter = document.getElementById('category-filter').value;
             renderTasks();
         });
-    });
 
-    // Добавляем обработчик для сортировки по дате (select)
-    document.getElementById('date-sort').addEventListener('change', (e) => {
-        renderTasks();
-    });
+        document.getElementById('date-filter').addEventListener('change', renderTasks);
+        document.getElementById('clear-date-filter').addEventListener('click', () => {
+            document.getElementById('date-filter').value = '';
+            renderTasks();
+        });
 
-    // Добавляем обработчик для сортировки по конкретной дате
-    document.getElementById('date-filter').addEventListener('change', (e) => {
-        renderTasks();
-    });
+        document.getElementById('date-sort').addEventListener('change', renderTasks);
 
-    // Добавляем обработчик для очистки поля с датой
-    document.getElementById('clear-date-filter').addEventListener('click', () => {
-        document.getElementById('date-filter').value = '';
-        renderTasks();
-    });
+        // Обработчики для фильтра по статусу
+        document.querySelectorAll('input[name="status"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentStatusFilter = e.target.value;
+                renderTasks();
+            });
+        });
 
-    // Добавляем обработчик кнопки добавления задачи
-    document.querySelector('.add-task-button').addEventListener('click', addTask);
+        // Обработчики для списков задач
+        const taskLists = document.querySelectorAll('.task-list');
+        taskLists.forEach(list => {
+            // Делегирование событий для задач
+            list.addEventListener('click', async (e) => {
+                const taskElement = e.target.closest('.task');
+                if (!taskElement) return;
 
-    // Обработчики для задач
-    document.addEventListener('click', (event) => {
+                // Обработка чекбокса (выполнение задачи)
+                if (e.target.classList.contains('task-comp') || e.target.classList.contains('check-label')) {
+                    await completeTask(e);
+                }
+                // Кнопка редактирования
+                else if (e.target.closest('.task-change')) {
+                    changeTask(e);
+                }
+                // Кнопка изменения даты
+                else if (e.target.closest('.task-change-date')) {
+                    changeTaskDate(e);
+                }
+                // Кнопка удаления
+                else if (e.target.closest('.task-delete')) {
+                    await deleteTask(e);
+                }
+                // Кнопка раскрытия описания
+                else if (e.target.closest('.task-open-description')) {
+                    const descBlock = taskElement.querySelector('.task-description');
+                    const descButton = taskElement.querySelector('.task-open-description');
+                    
+                    descBlock.classList.toggle('hidden');
+                    descButton.classList.toggle('rotated');
+                }
+                // Кнопка редактирования описания
+                else if (e.target.closest('.task-description-text')) {
+                    initEditorForTask(taskElement);
+                }
+                // Кнопка сохранения описания
+                else if (e.target.closest('.save-description-btn')) {
+                    await saveTaskDescription(e);
+                }
+                // Кнопка отмены редактирования описания
+                else if (e.target.closest('.cancel-description-btn')) {
+                    cancelTaskDescriptionEditing(e);
+                }
+            });
+        });
 
-        // Если нажали на кнопку изменения названия задачи
-        if (event.target.classList.contains('task-change-logo') ||
-            event.target.classList.contains('task-change')) {
-            changeTask(event);
+        // Обработчики для графиков на вкладке статистики
+        document.getElementById('chart-type').addEventListener('change', (e) => {
+            currentChartType = e.target.value;
+            initPieChart();
+        });
+
+        document.getElementById('productivity-period').addEventListener('change', (e) => {
+            const customPeriod = document.getElementById('custom-period-selector');
+            customPeriod.classList.toggle('hidden', e.target.value !== PRODUCTIVITY_PERIODS.CUSTOM);
+            
+            if (e.target.value !== PRODUCTIVITY_PERIODS.CUSTOM) {
+                updateProductivityChart();
+            }
+        });
+
+        document.getElementById('apply-custom-period').addEventListener('click', updateProductivityChart);
+
+        // Если открыта вкладка статистики, инициализируем графики
+        if (document.getElementById('statistics').classList.contains('active')) {
+            initPieChart();
+            initProductivityChart();
         }
 
-        // Если нажато кнопка раскрытия описания, то раскрываем его
-        if (event.target.classList.contains('task-description-ico') ||
-            event.target.classList.contains('task-open-description')) {
-            const taskItem = event.target.closest('.task');
-            const description = taskItem.querySelector('.task-description');
-            description.classList.toggle('hidden');
-        }
-
-        // Если нажали на само описание, то открываем редактирование описания
-        if (event.target.classList.contains('task-description-text')) {
-            const taskItem = event.target.closest('.task');
-            initEditorForTask(taskItem);
-        }
-
-        // Если нажали на сохранение описания
-        if (event.target.classList.contains('save-description-btn')) {
-            saveTaskDescription(event);
-        }
-
-        // Если нажали на отмету сохранения описания
-        if (event.target.classList.contains('cancel-description-btn')) {
-            cancelTaskDescriptionEditing(event);
-        }
-
-        // Если нажали на кнопку изменения даты
-        if (event.target.classList.contains('task-change-date') ||
-            event.target.classList.contains('task-change-date-logo')) {
-            changeTaskDate(event);
-        }
-
-        // Если нажали на кнопку удаления задачи
-        if (event.target.classList.contains('task-delete-ico') || event.target.classList.contains('task-delete')) {
-            deleteTask(event);
-        }
-
-    });
-
-    // Добавляем обработчики для "выполнения задачи"
-    document.addEventListener('click', (event) => {
-        if (event.target.classList.contains('check-label')) {
-            completeTask(event);
-        }
-    });
-
-    // Добавляем обработчик изменения типа диаграммы
-    document.getElementById('chart-type').addEventListener('change', (e) => {
-        currentChartType = e.target.value;
-        initPieChart();
-    });
-
-    // Добавляем обработчик изменения периода графика продуктивности
-    document.getElementById('productivity-period').addEventListener('change', (e) => {
-        const period = e.target.value;
-        // Если выбран "кастомный" период, то показываем настройки даты
-        document.getElementById('custom-period-selector').classList.toggle('hidden', period !== PRODUCTIVITY_PERIODS.CUSTOM);
-        updateProductivityChart();
-    });
-
-    // Добавляем обработчик для кнопки "применить" при выборе кастомного периода
-    document.getElementById('apply-custom-period').addEventListener('click', updateProductivityChart);
-
-    // Добавляем обработчик для кнопки "Экспорт в PDF"
-    document.querySelector('.export-button').addEventListener('click', initExportModal);
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+        window.location.href = '/login.html';
+    }
 };
-
-// Инициализация произойдет только после загрузки всего HTML
-window.onload = init;
 
 // Функция обновления информации
 function updateUI() {
@@ -227,48 +235,59 @@ function updateUI() {
     saveTasks();
 };
 
-// Функция загрузки категорий из localStorage
-function loadCategories() {
-    // Загрузка категорий в константу
-    const saved = localStorage.getItem('todoCategories');
+// Функция загрузки категорий с сервера
+async function loadCategories() {
+    try {
+        const serverCategories = await todoAPI.getCategories();
+        
+        // Преобразуем массив категорий в объект для совместимости
+        categories = serverCategories.reduce((acc, cat) => {
+            acc[cat.category_id] = {
+                id: cat.category_id,
+                name: cat.name,
+                color: cat.color,
+                is_default: cat.is_default
+            };
+            return acc;
+        }, {});
 
-    // Если загрузили хоть какие-то категории, то записываем их
-    if (saved) {
-        categories = JSON.parse(saved);
+        // Если категорий нет, создаем стандартные
+        if (Object.keys(categories).length === 0) {
+            const defaultCategories = await todoAPI.createDefaultCategories();
+            categories = defaultCategories.reduce((acc, cat) => {
+                acc[cat.category_id] = {
+                    id: cat.category_id,
+                    name: cat.name,
+                    color: cat.color,
+                    is_default: cat.is_default
+                };
+                return acc;
+            }, {});
+        }
+
+        updateCategorySelectors();
+    } catch (error) {
+        console.error('Ошибка при загрузке категорий:', error);
+        throw error;
     }
-
-    // Гарантируем, что категория по умолчанию всегда существует
-    if (!categories[defaultCategoryId]) {
-        categories[defaultCategoryId] = {
-            id: defaultCategoryId,
-            name: 'Общее',
-            color: '#607D8B'
-        };
-    }
-
-    // Обновляем списки категорий
-    updateCategorySelectors();
 }
 
-// Функция загрузки задач из localStorage
-function loadTasks() {
+// Функция загрузки задач с сервера
+async function loadTasks() {
+    try {
+        const serverTasks = await todoAPI.getTasks();
+        
+        // Разделяем задачи на активные и выполненные
+        tasks = {
+            active: serverTasks.active || [],
+            completed: serverTasks.completed || []
+        };
 
-    // Получение сохраненных в localStorage задач
-    const savedTasks = localStorage.getItem('todoTasks');
-
-    // Если в localStorage есть хоть одна задача
-    if (savedTasks) {
-        tasks = JSON.parse(savedTasks);
-
-        // Добавляем originalPosition(положение задачи в списке) для задач, у которых его нет
-        tasks.active.forEach((task, index) => {
-            if (task.originalPosition === undefined) {
-                task.originalPosition = index;
-            }
-        });
+        updateUI();
+    } catch (error) {
+        console.error('Ошибка при загрузке задач:', error);
+        throw error;
     }
-
-    updateUI();
 }
 
 // Функция инициализации вкладок
@@ -297,7 +316,6 @@ function initTabs() {
 
 // Функция перетаскивания задачи
 function setupDragAndDrop() {
-
     // Получаем списки активных и завершенных задач
     const taskLists = document.querySelectorAll('.task-list');
 
@@ -307,12 +325,10 @@ function setupDragAndDrop() {
 
     // Проходимся по каждому списку
     taskLists.forEach(list => {
-
         // Начало перетаскивания
         list.addEventListener('dragstart', (e) => {
-
-            // Если взята задача, то добавляем ей класс
-            if (e.target.classList.contains('task')) {
+            // Проверяем, что это активная задача
+            if (e.target.classList.contains('task') && !e.target.classList.contains('completed-task')) {
                 draggedItem = e.target;
                 draggedItem.classList.add('dragging');
 
@@ -329,6 +345,9 @@ function setupDragAndDrop() {
 
                 // Разрешено только перетаскивание
                 e.dataTransfer.effectAllowed = 'move';
+            } else {
+                // Отменяем перетаскивание для выполненных задач
+                e.preventDefault();
             }
         });
 
@@ -338,11 +357,7 @@ function setupDragAndDrop() {
             e.dataTransfer.dropEffect = 'move';
 
             // Проверка, что перетаскивание корректно
-            if (!draggedItem || !placeholder) return;
-
-            // Проверяем, что перетаскивание происходит в том же списке
-            const isSameList = draggedItem.closest('.task-list') === list;
-            if (!isSameList) return;
+            if (!draggedItem || !placeholder || list.id !== 'current-tasks-list') return;
 
             // Добавляем класс для визуального выделения
             list.classList.add('drag-over');
@@ -381,10 +396,10 @@ function setupDragAndDrop() {
         });
 
         // Сброс элемента
-        list.addEventListener('drop', (e) => {
+        list.addEventListener('drop', async (e) => {
             e.preventDefault();
 
-            if (!draggedItem || !placeholder) return;
+            if (!draggedItem || !placeholder || list.id !== 'current-tasks-list') return;
 
             // Вставляем перетаскиваемый элемент вместо плейсхолдера
             if (placeholder.parentNode) {
@@ -394,8 +409,8 @@ function setupDragAndDrop() {
             draggedItem.style.display = '';
             list.classList.remove('drag-over');
 
-            // Обновляем порядок задач
-            updateTaskOrder(list);
+            // Обновляем порядок задач в БД
+            await updateTaskOrder(list);
         });
 
         // Завершение перетаскивания
@@ -421,93 +436,85 @@ function setupDragAndDrop() {
     });
 }
 
-// Функция обновления порядка задач после перетаскивания
-function updateTaskOrder(list) {
-    const isCompleted = list.id === 'completed-tasks-list';
-    const taskArray = isCompleted ? tasks.completed : tasks.active;
-    const newTaskArray = [];
+// Функция обновления порядка задач в БД
+async function updateTaskOrder(list) {
+    try {
+        const taskElements = list.querySelectorAll('.task:not(.completed-task)');
+        const orderData = [];
 
-    // Получаем новый порядок задач из DOM
-    const taskElements = list.querySelectorAll('.task');
+        taskElements.forEach((taskElement, index) => {
+            const taskId = taskElement.dataset.taskId;
+            if (taskId) {
+                orderData.push({
+                    taskId: taskId,
+                    order: index
+                });
+            }
+        });
 
-    // Создаем карту для быстрого поиска задач по их текущему индексу
-    const taskMap = {};
-    taskArray.forEach(task => {
-        taskMap[task.originalPosition] = task;
-    });
-
-    // Собираем задачи в новом порядке
-    taskElements.forEach((element, newIndex) => {
-        const originalIndex = parseInt(element.dataset.originalIndex);
-        const task = taskArray[originalIndex];
-
-        if (task) {
-            task.originalPosition = newIndex;
-            newTaskArray.push(task);
+        if (orderData.length > 0) {
+            await todoAPI.updateTaskOrder(orderData);
         }
-    });
-
-    // Обновляем массив задач
-    if (isCompleted) {
-        tasks.completed = newTaskArray;
-    } else {
-        tasks.active = newTaskArray;
+    } catch (error) {
+        console.error('Ошибка при обновлении порядка задач:', error);
     }
-
-    // Обновляем data-атрибуты в DOM
-    taskElements.forEach((element, index) => {
-        element.dataset.originalIndex = index;
-    });
-
-    saveTasks();
 }
 
 // Функция отрисовки задач с учетом фильтров
 function renderTasks() {
-
     // Получение списков задач
     const activeList = document.querySelector('#current-tasks-list');
     const completedList = document.querySelector('#completed-tasks-list');
 
-    //Обнуление размети этих списков
+    //Обнуление разметки этих списков
     activeList.innerHTML = '';
     completedList.innerHTML = '';
 
     // Отбор задач по критериям фильтрации
     const matchesFilters = (task, isCompleted) => {
-
         // Отбор по статусу (Активные/Завершенные)
         if (currentStatusFilter === 'active' && isCompleted) return false;
         if (currentStatusFilter === 'completed' && !isCompleted) return false;
 
         // Отбор по категориям
         if (currentCategoryFilter !== 'all') {
-            const taskCategory = task.category || defaultCategoryId;
+            const taskCategory = task.category_id || defaultCategoryId;
             if (taskCategory !== currentCategoryFilter) return false;
         }
 
         // Отбор по дате
         const dateFilter = document.getElementById('date-filter').value;
         if (dateFilter) {
-            if (dateFilter && task.dueDate !== dateFilter) return false;
+            if (!task.due_date) return false;
+            
+            // Преобразуем дату фильтра в объект Date
+            const filterDate = new Date(dateFilter);
+            filterDate.setHours(0, 0, 0, 0);
+            
+            // Преобразуем дату задачи в объект Date в локальном часовом поясе
+            const taskDate = new Date(task.due_date);
+            taskDate.setHours(0, 0, 0, 0);
+            
+            // Сравниваем даты, игнорируя время
+            if (taskDate.getTime() !== filterDate.getTime()) return false;
         }
 
         return true;
     };
 
     // Сортируем каждый из списков
-    const activeTasks = sortTasksByDate(tasks.active.filter(task => matchesFilters(task, false)));
-    const completedTasks = sortTasksByDate(tasks.completed.filter(task => matchesFilters(task, true)));
+    const activeTasks = sortTasksByDate([...tasks.active].filter(task => matchesFilters(task, false)));
+    const completedTasks = sortTasksByDate([...tasks.completed].filter(task => matchesFilters(task, true)));
 
     // Рендерим с сохранением оригинальных индексов
     activeTasks.forEach((task) => {
-        const originalIndex = tasks.active.findIndex(t => t === task);
+        const originalIndex = tasks.active.findIndex(t => t.task_id === task.task_id);
         const taskElement = createTaskElement(task, originalIndex, false);
         activeList.appendChild(taskElement);
     });
 
     completedTasks.forEach((task) => {
-        const originalIndex = tasks.completed.findIndex(t => t === task);
+        const originalIndex = tasks.completed.findIndex(t => t.task_id === task.task_id);
         const taskElement = createTaskElement(task, originalIndex, true);
         completedList.appendChild(taskElement);
     });
@@ -519,15 +526,15 @@ function renderTasks() {
 
 // Функция создания самой задачи
 function createTaskElement(task, index, isCompleted) {
-
     // Создает задачу (элемент списка) и задаем есть параметры
     const taskElement = document.createElement('li');
     taskElement.className = `task task${index} ${isCompleted ? 'completed-task' : ''}`;
     taskElement.dataset.originalIndex = index;
     taskElement.dataset.isCompleted = isCompleted;
-    taskElement.draggable = true; // Добавляем возможность перетаскивания
+    taskElement.dataset.taskId = task.task_id; // Добавляем ID задачи
+    taskElement.draggable = true;
 
-    const categoryId = task.category || defaultCategoryId;
+    const categoryId = task.category_id || defaultCategoryId;
     taskElement.dataset.category = categoryId;
     const category = categories[categoryId] || categories[defaultCategoryId];
 
@@ -540,6 +547,9 @@ function createTaskElement(task, index, isCompleted) {
     });
     const htmlDescription = task.description ? tempEditor.getHTML() : 'Нет описания';
     tempEditor.destroy();
+
+    const hasNotification = task.notification_time !== null && task.notification_time !== undefined;
+    const notificationClass = hasNotification ? 'has-notification' : '';
 
     taskElement.innerHTML = `
     <div class="task-wrapper">
@@ -555,7 +565,10 @@ function createTaskElement(task, index, isCompleted) {
             </button>
         </div>
         <div class="task-date-wrapper">
-            <span class="task-due-date">${formatDate(task.dueDate)}</span>
+            <button class="notification-btn ${notificationClass} ${isCompleted ? 'disabled' : ''}" title="Настроить уведомления">
+                <img src="img/bell.svg" alt="Уведомления">
+            </button>
+            <span class="task-due-date">${formatDate(task.due_date)}</span>
             <button class="task-change-date">
                 <img class="task-change-date-logo" src="img/edit-ico.svg" alt="Изменить дату">
             </button>
@@ -582,7 +595,196 @@ function createTaskElement(task, index, isCompleted) {
     </div>`;
 
     taskElement.setAttribute('style', `border-color: ${category.color}`);
+
+    // Добавляем обработчик для кнопки уведомлений
+    const notificationBtn = taskElement.querySelector('.notification-btn');
+    notificationBtn.addEventListener('click', (e) => {
+        if (!isCompleted) {  // Добавляем проверку
+            e.stopPropagation();
+            showNotificationDropdown(taskElement, task);
+        }
+    });
+
     return taskElement;
+}
+
+// Функция для отображения выпадающего меню уведомлений
+function showNotificationDropdown(taskElement, task) {
+    // Если задача выполнена, не показываем дропдаун
+    if (task.status === 'completed') return;
+
+    // Закрываем все открытые дропдауны
+    document.querySelectorAll('.notification-dropdown').forEach(dropdown => dropdown.remove());
+
+    const notificationBtn = taskElement.querySelector('.notification-btn');
+    const taskDueDate = task.due_date ? new Date(task.due_date) : null;
+
+    // Создаем дропдаун
+    const dropdown = document.createElement('div');
+    dropdown.className = 'notification-dropdown';
+
+    // Получаем текущие настройки уведомления
+    const currentNotification = task.notification_time ? new Date(task.notification_time) : null;
+    const isEnabled = task.notifications_enabled || false;
+
+    dropdown.innerHTML = `
+        <h4>Настройка уведомления</h4>
+        <div class="notification-form">
+            <div class="notification-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="notifications-enabled" ${isEnabled ? 'checked' : ''}>
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">Уведомления ${isEnabled ? 'включены' : 'выключены'}</span>
+            </div>
+            <div class="notification-datetime ${!isEnabled ? 'disabled' : ''}">
+                <input type="date" id="notification-date" 
+                    ${taskDueDate ? `max="${taskDueDate.toISOString().split('T')[0]}"` : ''} 
+                    value="${currentNotification ? currentNotification.toISOString().split('T')[0] : ''}"
+                    ${!isEnabled ? 'disabled' : ''}
+                >
+                <input type="time" id="notification-time" 
+                    value="${currentNotification ? currentNotification.toTimeString().slice(0,5) : ''}"
+                    ${!isEnabled ? 'disabled' : ''}
+                >
+            </div>
+            <div class="notification-error hidden"></div>
+            <div class="notification-actions">
+                <button class="save-notification">Сохранить</button>
+            </div>
+        </div>
+    `;
+
+    // Позиционируем дропдаун
+    const rect = notificationBtn.getBoundingClientRect();
+    dropdown.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    dropdown.style.left = `${rect.left + window.scrollX}px`;
+
+    document.body.appendChild(dropdown);
+
+    // Обработчики событий
+    const toggleSwitch = dropdown.querySelector('#notifications-enabled');
+    const dateInput = dropdown.querySelector('#notification-date');
+    const timeInput = dropdown.querySelector('#notification-time');
+    const errorDiv = dropdown.querySelector('.notification-error');
+    const datetimeDiv = dropdown.querySelector('.notification-datetime');
+    const toggleLabel = dropdown.querySelector('.toggle-label');
+
+    // Обработчик переключателя
+    toggleSwitch.addEventListener('change', (e) => {
+        const isEnabled = e.target.checked;
+        toggleLabel.textContent = `Уведомления ${isEnabled ? 'включены' : 'выключены'}`;
+        dateInput.disabled = !isEnabled;
+        timeInput.disabled = !isEnabled;
+        datetimeDiv.classList.toggle('disabled', !isEnabled);
+    });
+
+    // Валидация даты и времени
+    function validateDateTime() {
+        if (!toggleSwitch.checked) return true;
+
+        const selectedDate = dateInput.value;
+        const selectedTime = timeInput.value;
+        const taskHasDate = task.due_date !== null;
+
+        // Если у задачи нет даты, то обязательно нужно выбрать дату и время
+        if (!taskHasDate && (!selectedDate || !selectedTime)) {
+            errorDiv.textContent = 'Для задачи без даты необходимо указать дату и время уведомления';
+            errorDiv.classList.remove('hidden');
+            return false;
+        }
+
+        // Если выбрана дата и/или время, проверяем их
+        if (selectedDate && selectedTime) {
+            const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+            const now = new Date();
+
+            if (selectedDateTime < now) {
+                errorDiv.textContent = 'Нельзя выбрать прошедшее время';
+                errorDiv.classList.remove('hidden');
+                return false;
+            }
+
+            if (taskHasDate) {
+                const taskDueDate = new Date(task.due_date);
+                if (selectedDateTime > taskDueDate) {
+                    errorDiv.textContent = 'Время уведомления не может быть позже срока задачи';
+                    errorDiv.classList.remove('hidden');
+                    return false;
+                }
+            }
+        }
+
+        errorDiv.classList.add('hidden');
+        return true;
+    }
+
+    // Убираем валидацию при изменении даты/времени
+    dateInput.addEventListener('change', () => {
+        errorDiv.classList.add('hidden');
+    });
+    timeInput.addEventListener('change', () => {
+        errorDiv.classList.add('hidden');
+    });
+
+    // Закрытие time input при потере фокуса
+    timeInput.addEventListener('blur', () => {
+        // Даем браузеру время на обработку выбора
+        setTimeout(() => {
+            timeInput.type = 'text';
+            timeInput.type = 'time';
+        }, 200);
+    });
+
+    // Сохранение настроек
+    dropdown.querySelector('.save-notification').addEventListener('click', async () => {
+        if (!validateDateTime()) return;
+
+        try {
+            const updateData = {
+                notifications_enabled: toggleSwitch.checked
+            };
+
+            if (toggleSwitch.checked) {
+                if (dateInput.value && timeInput.value) {
+                    // Если выбраны конкретные дата и время
+                    const notificationTime = new Date(`${dateInput.value}T${timeInput.value}`);
+                    updateData.notification_time = notificationTime.toISOString();
+                } else if (task.due_date) {
+                    // Если не выбраны дата и время, но у задачи есть дата - ставим 8:00
+                    const taskDate = new Date(task.due_date);
+                    taskDate.setHours(8, 0, 0, 0);
+                    updateData.notification_time = taskDate.toISOString();
+                } else {
+                    // Если у задачи нет даты и не выбрано время - просто включаем уведомления без времени
+                    updateData.notification_time = null;
+                }
+            } else {
+                updateData.notification_time = null;
+            }
+
+            await todoAPI.updateTaskNotifications(task.task_id, updateData);
+            
+            // Обновляем состояние кнопки уведомлений
+            notificationBtn.classList.toggle('has-notification', toggleSwitch.checked);
+            task.notifications_enabled = toggleSwitch.checked;
+            task.notification_time = updateData.notification_time;
+            
+            dropdown.remove();
+        } catch (error) {
+            console.error('Ошибка при сохранении настроек уведомления:', error);
+            errorDiv.textContent = 'Ошибка при сохранении настроек';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    // Закрытие дропдауна при клике вне его
+    document.addEventListener('click', function closeDropdown(e) {
+        if (!dropdown.contains(e.target) && !notificationBtn.contains(e.target)) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+        }
+    });
 }
 
 // Функция отображения настроек категорий
@@ -619,6 +821,19 @@ function showCategoryManager() {
     });
 }
 
+// Функция для debounce
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Функция для вывода списка категорий в настройках категорий
 function renderCategoriesList(container) {
     container.innerHTML = '';
@@ -639,18 +854,73 @@ function renderCategoriesList(container) {
         container.appendChild(categoryElement);
 
         // Обработчик события для изменения имени категории
-        categoryElement.querySelector('.category-name').addEventListener('change', (e) => {
-            categories[category.id].name = e.target.value;
-            saveCategories();
-            updateCategorySelectors();
-            renderTasks();
+        categoryElement.querySelector('.category-name').addEventListener('change', async (e) => {
+            try {
+                await todoAPI.updateCategory(category.id, { 
+                    name: e.target.value,
+                    color: category.color 
+                });
+                categories[category.id].name = e.target.value;
+                updateCategorySelectors();
+                renderTasks();
+            } catch (error) {
+                console.error('Ошибка при обновлении имени категории:', error);
+            }
         });
 
+        // Создаем debounced функцию для обновления цвета
+        const debouncedColorUpdate = debounce(async (newColor) => {
+            try {
+                const currentName = categories[category.id].name;
+                await todoAPI.updateCategory(category.id, { 
+                    name: currentName,
+                    color: newColor 
+                });
+                categories[category.id].color = newColor;
+                renderTasks();
+            } catch (error) {
+                console.error('Ошибка при обновлении цвета категории:', error);
+            }
+        }, 300); // Задержка в 300 миллисекунд
+
         // Обработчик события для изменения цвета категории
-        categoryElement.querySelector('.category-color-picker').addEventListener('input', (e) => {
-            categories[category.id].color = e.target.value;
-            saveCategories();
-            renderTasks();
+        const colorPicker = categoryElement.querySelector('.category-color-picker');
+        let lastColor = category.color;
+
+        // При изменении цвета только обновляем UI
+        colorPicker.addEventListener('input', (e) => {
+            const newColor = e.target.value;
+            categoryElement.style.borderColor = newColor;
+            const taskElements = document.querySelectorAll(`.task[data-category="${category.id}"]`);
+            taskElements.forEach(task => {
+                const categorySpan = task.querySelector('.task-category');
+                if (categorySpan) {
+                    categorySpan.style.backgroundColor = newColor;
+                }
+                task.style.borderColor = newColor;
+            });
+        });
+
+        // При отпускании кнопки мыши сохраняем изменения в БД
+        colorPicker.addEventListener('change', async (e) => {
+            const newColor = e.target.value;
+            if (newColor !== lastColor) {
+                try {
+                    const currentName = categories[category.id].name;
+                    await todoAPI.updateCategory(category.id, { 
+                        name: currentName,
+                        color: newColor 
+                    });
+                    categories[category.id].color = newColor;
+                    lastColor = newColor;
+                    renderTasks();
+                } catch (error) {
+                    console.error('Ошибка при обновлении цвета категории:', error);
+                    // В случае ошибки возвращаем предыдущий цвет
+                    e.target.value = lastColor;
+                    renderTasks();
+                }
+            }
         });
 
         // Обработчик события для удаления категории
@@ -687,11 +957,9 @@ function updateCategorySelectors() {
 }
 
 // Функция добавления новой категории
-function addNewCategory() {
+async function addNewCategory() {
     const newId = generateId();
     const categoryNumber = Object.keys(categories).length;
-
-    // Список цветов, которые могут быть по стандарту присвоены новой категории
     const colorPalette = [
         '#FF5252', '#FFD740', '#69F0AE', '#448AFF', '#B388FF',
         '#FF80AB', '#7C4DFF', '#64FFDA', '#FF8A80', '#EA80FC',
@@ -699,32 +967,26 @@ function addNewCategory() {
     ];
 
     const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+    const defaultName = `Категория-${categoryNumber}`;
 
-    // Создание объекта категории
-    const newCategory = {
-        id: newId,
-        name: `Категория-${categoryNumber}`,
-        color: randomColor
-    };
+    try {
+        const newCategory = await todoAPI.createCategory(defaultName, randomColor);
+        
+        categories[newCategory.category_id] = {
+            id: newCategory.category_id,
+            name: newCategory.name,
+            color: newCategory.color
+        };
 
-    categories[newId] = newCategory;
-    saveCategories();
-
-    const manager = document.querySelector('.category-manager-modal');
-    if (manager) {
-        renderCategoriesList(manager.querySelector('.categories-list'));
-
-        // Находим только что созданную категорию и фокусируемся на поле ввода
-        const newCategoryElement = manager.querySelector(`.category-item:last-child`);
-        if (newCategoryElement) {
-            const nameInput = newCategoryElement.querySelector('.category-name');
-            nameInput.focus();
-            nameInput.select(); // Выделяем весь текст для удобства переименования
-            manager.querySelector('#add-new-category-down').scrollIntoView({ behavior: 'smooth' });
+        const manager = document.querySelector('.category-manager-modal');
+        if (manager) {
+            renderCategoriesList(manager.querySelector('.categories-list'));
         }
+        
+        updateCategorySelectors();
+    } catch (error) {
+        console.error('Ошибка при создании категории:', error);
     }
-    updateCategorySelectors();
-
 }
 
 // Функция для создания уникального ID у категории
@@ -735,36 +997,27 @@ function generateId() {
 }
 
 // Функция удаления категории
-function deleteCategory(categoryId) {
-    // Переводим задачи этой категории в категорию по умолчанию
-    tasks.active.forEach(task => {
-        if (task.category === categoryId) task.category = defaultCategoryId;
-    });
-    tasks.completed.forEach(task => {
-        if (task.category === categoryId) task.category = defaultCategoryId;
-    });
-
-    // Удаляем категорию
-    delete categories[categoryId];
-
-    saveTasks();
-    saveCategories();
-    updateUI();
+async function deleteCategory(categoryId) {
+    try {
+        await todoAPI.deleteCategory(categoryId);
+        delete categories[categoryId];
+        
+        // Обновляем UI
+        updateUI();
+    } catch (error) {
+        console.error('Ошибка при удалении категории:', error);
+    }
 }
 
 // Функция добавления новой задачи
-function addTask() {
-
-    // Создаем элемент списка и присваимаем ему класс
+async function addTask() {
     const newTask = document.createElement('li');
     newTask.className = "task new-task";
 
-    // Преобразуем объект категорий в массив для рендеринга options
     const categoryOptions = Object.values(categories).map(cat =>
         `<option class="new-task-category-option" value="${cat.id}">${cat.name}</option>`
     ).join('');
 
-    // Создаем "форму" для создания новой задачи
     newTask.innerHTML = `
         <div class="task-title-wrapper">
             <img class="new-task-ico" src="img/task-ico.png" alt="check">
@@ -776,11 +1029,9 @@ function addTask() {
         <input type="date" class="new-task-due-date">
     `;
 
-    // Добавляем "форму" создания задачи в начало списка текущих задач
     const taskList = document.querySelector('#current-tasks-list');
     taskList.prepend(newTask);
 
-    // Фокусируемся и создаем обработчики для сохранения введенного названия новой задачи
     const newTitle = newTask.querySelector('.new-task-title');
     newTitle.focus();
 
@@ -790,7 +1041,7 @@ function addTask() {
         }
     });
 
-    newTitle.addEventListener('blur', (e) => {
+    newTitle.addEventListener('blur', async (e) => {
         const selectCat = newTask.querySelector('.new-task-category');
         const dueDateInput = newTask.querySelector('.new-task-due-date');
 
@@ -800,25 +1051,31 @@ function addTask() {
         }
 
         if (newTitle.value) {
-            const taskTitleText = newTitle.value;
-            const taskDesc = '';
-            const taskCategory = newTask.querySelector('.new-task-category').value;
-            const dueDate = dueDateInput.value || null;
+            try {
+                let dueDate = null;
+                if (dueDateInput.value) {
+                    // Создаем дату в локальном часовом поясе
+                    const localDate = new Date(dueDateInput.value);
+                    localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                    dueDate = localDate.toISOString(); // Преобразуем в ISO формат
+                }
 
-            tasks.active.unshift({
-                title: taskTitleText,
-                description: taskDesc,
-                category: taskCategory,
-                dueDate: dueDate,
-                originalPosition: tasks.active.length
-            });
+                const taskData = {
+                    title: newTitle.value,
+                    description: '',
+                    category_id: selectCat.value,
+                    due_date: dueDate
+                };
 
-            updateUI();
-        } else {
-            newTask.remove();
+                await todoAPI.createTask(taskData);
+                await loadTasks(); // Перезагружаем задачи с сервера
+            } catch (error) {
+                console.error('Ошибка при создании задачи:', error);
+            }
         }
+        newTask.remove();
     });
-};
+}
 
 // Функция сохранения задач
 function saveTasks() {
@@ -827,7 +1084,7 @@ function saveTasks() {
 }
 
 // Функция редактирования задачи
-function changeTask(event) {
+async function changeTask(event) {
     const currentTaskWr = event.target.closest('.task');
     const currentTask = currentTaskWr.querySelector('.task-title-wrapper');
     const currentTaskTitle = currentTask.querySelector('.task-title');
@@ -838,7 +1095,6 @@ function changeTask(event) {
 
     const isInput = currentTask.querySelector('.task-title-input');
     if (!isInput) {
-        // Отключаем перетаскивание сразу при создании поля ввода
         toggleTaskDraggable(currentTaskWr, false);
 
         const currentTitleText = currentTaskTitle.innerText;
@@ -876,25 +1132,25 @@ function changeTask(event) {
         let newCategory = currentCategoryId;
         let newTitle = currentTitleText;
 
-        const saveChanges = () => {
+        const saveChanges = async () => {
             if (isSaved) return;
             isSaved = true;
 
-            const taskElement = event.target.closest('.task');
-            const taskIndex = Array.from(taskElement.parentNode.children).indexOf(taskElement);
+            try {
+                const taskElement = event.target.closest('.task');
+                const taskId = taskElement.dataset.taskId;
+                const isCompleted = taskElement.classList.contains('completed-task');
 
-            if (taskElement.classList.contains('completed-task')) {
-                tasks.completed[taskIndex].title = newTitle;
-                tasks.completed[taskIndex].category = newCategory;
-            } else {
-                tasks.active[taskIndex].title = newTitle;
-                tasks.active[taskIndex].category = newCategory;
+                await todoAPI.updateTask(taskId, {
+                    title: newTitle,
+                    category_id: newCategory
+                });
+
+                await loadTasks(); // Перезагружаем задачи
+                toggleTaskDraggable(currentTaskWr, true);
+            } catch (error) {
+                console.error('Ошибка при обновлении задачи:', error);
             }
-
-            // Включаем перетаскивание обратно после сохранения
-            toggleTaskDraggable(currentTaskWr, true);
-
-            updateUI();
         };
 
         taskTitleInput.addEventListener('input', (e) => {
@@ -929,7 +1185,7 @@ function changeTask(event) {
             }
         }, { once: true });
     }
-};
+}
 
 // Функция сортировки задач по дату
 function sortTasksByDate(tasksArray) {
@@ -942,31 +1198,31 @@ function sortTasksByDate(tasksArray) {
     }
 
     // Разделяем задачи на те, у которых есть дата и нет
-    const tasksWithDate = tasksArray.filter(task => task.dueDate);
-    const tasksWithoutDate = tasksArray.filter(task => !task.dueDate);
+    const tasksWithDate = tasksArray.filter(task => task.due_date);
+    const tasksWithoutDate = tasksArray.filter(task => !task.due_date);
 
     // Сортируем только задачи с датой
     const sortedTasks = [...tasksWithDate].sort((a, b) => {
-        const aDate = new Date(a.dueDate);
+        const aDate = new Date(a.due_date);
         aDate.setHours(0, 0, 0, 0);
-        const bDate = new Date(b.dueDate);
+        const bDate = new Date(b.due_date);
         bDate.setHours(0, 0, 0, 0);
 
         // Для сортировки по близости к текущей дате
         if (sortType === 'nearest' || sortType === 'farthest') {
-            const aDiff = Math.abs(aDate - today);
-            const bDiff = Math.abs(bDate - today);
+            const aDiff = Math.abs(aDate.getTime() - today.getTime());
+            const bDiff = Math.abs(bDate.getTime() - today.getTime());
 
             return sortType === 'nearest' ? aDiff - bDiff : bDiff - aDiff;
         }
         // Для простой сортировки по дате
         else {
-            return sortType === 'asc' ? aDate - bDate : bDate - aDate;
+            return sortType === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
         }
     });
 
     // Возвращаем отсортированные задачи с датой + задачи без даты
-    return [...sortedTasks, ...tasksWithoutDate];
+    return sortType === 'asc' ? [...sortedTasks, ...tasksWithoutDate] : [...sortedTasks, ...tasksWithoutDate];
 }
 
 // Вспомогательная функция для поиска ID категории по имени
@@ -1037,14 +1293,13 @@ function initEditorForTask(taskElement) {
 }
 
 // Функция сохранения описания
-function saveTaskDescription(event) {
+async function saveTaskDescription(event) {
     const taskElement = event.target.closest('.task');
     if (!taskElement) return;
 
     const index = parseInt(taskElement.dataset.originalIndex);
     if (isNaN(index)) return;
 
-    const isCompleted = taskElement.classList.contains('completed-task');
     const editorId = `editor-${index}`;
     const editor = activeEditors[editorId];
 
@@ -1053,36 +1308,45 @@ function saveTaskDescription(event) {
     const editorContainer = taskElement.querySelector(`#${editorId}`);
     const textDescription = taskElement.querySelector('.task-description-text');
     const editorButtons = taskElement.querySelector('.editor-buttons');
+    const descriptionBlock = taskElement.querySelector('.task-description');
 
     if (!editorContainer || !textDescription || !editorButtons) return;
 
     try {
         const markdownContent = editor.getMarkdown();
         const htmlContent = editor.getHTML();
+        const taskId = taskElement.dataset.taskId;
 
-        if (isCompleted) {
-            if (tasks.completed[index]) {
-                tasks.completed[index].description = markdownContent;
-            }
-        } else {
-            if (tasks.active[index]) {
-                tasks.active[index].description = markdownContent;
-            }
-        }
+        // Сохраняем описание в БД
+        await todoAPI.updateTask(taskId, {
+            description: markdownContent
+        });
 
-        saveTasks();
-
+        // Обновляем отображение
         textDescription.innerHTML = htmlContent || 'Нет описания';
         textDescription.classList.remove('hidden');
         editorContainer.classList.add('hidden');
         editorButtons.classList.add('hidden');
+        descriptionBlock.classList.remove('hidden'); // Убеждаемся, что блок описания остается видимым
 
         // Включаем перетаскивание обратно после сохранения
         toggleTaskDraggable(taskElement, true);
 
         destroyEditor(editorId);
-    } catch (e) {
-        console.error('Ошибка при сохранении описания:', e);
+        
+        // Перезагружаем задачи для обновления данных
+        await loadTasks();
+
+        // После перезагрузки задач находим обновленный элемент и открываем его описание
+        const updatedTaskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (updatedTaskElement) {
+            const updatedDescBlock = updatedTaskElement.querySelector('.task-description');
+            if (updatedDescBlock) {
+                updatedDescBlock.classList.remove('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при сохранении описания:', error);
     }
 }
 
@@ -1124,7 +1388,7 @@ function destroyEditor(editorId) {
 }
 
 // Функция изменения даты у задачи
-function changeTaskDate(event) {
+async function changeTaskDate(event) {
     const taskElement = event.target.closest('.task');
     if (!taskElement) return;
 
@@ -1154,28 +1418,68 @@ function changeTaskDate(event) {
 
     dateInput.focus();
 
-    const saveDate = () => {
-        const newDate = dateInput.value || null;
-        const taskIndex = parseInt(taskElement.dataset.originalIndex);
-        const isCompleted = taskElement.classList.contains('completed-task');
+    const saveDate = async () => {
+        try {
+            const taskId = taskElement.dataset.taskId;
+            let newDate = null;
 
-        if (isCompleted) {
-            if (tasks.completed[taskIndex]) {
-                tasks.completed[taskIndex].dueDate = newDate;
+            if (dateInput.value) {
+                // Создаем дату в локальном часовом поясе
+                const localDate = new Date(dateInput.value);
+                localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
+                newDate = localDate.toISOString(); // Преобразуем в ISO формат
             }
-        } else {
-            if (tasks.active[taskIndex]) {
-                tasks.active[taskIndex].dueDate = newDate;
+
+            // Получаем текущую задачу для проверки настроек уведомлений
+            const task = await todoAPI.findTask(taskId);
+
+            // Если у задачи включены уведомления и не установлено конкретное время (стандартное уведомление)
+            if (task.notifications_enabled && task.notification_time) {
+                const notificationDate = new Date(task.notification_time);
+                const oldTaskDate = new Date(task.due_date);
+                
+                // Проверяем, было ли установлено стандартное время уведомления (8:00)
+                if (notificationDate.getHours() === 8 && 
+                    notificationDate.getMinutes() === 0 &&
+                    notificationDate.getDate() === oldTaskDate.getDate() &&
+                    notificationDate.getMonth() === oldTaskDate.getMonth() &&
+                    notificationDate.getFullYear() === oldTaskDate.getFullYear()) {
+                    
+                    // Если это стандартное уведомление, обновляем его на новую дату
+                    if (newDate) {
+                        const newNotificationDate = new Date(newDate);
+                        newNotificationDate.setHours(8, 0, 0, 0);
+                        await todoAPI.updateTaskNotifications(taskId, {
+                            notifications_enabled: true,
+                            notification_time: newNotificationDate.toISOString()
+                        });
+                    } else {
+                        // Если дата задачи удалена, отключаем уведомления
+                        await todoAPI.updateTaskNotifications(taskId, {
+                            notifications_enabled: false,
+                            notification_time: null
+                        });
+                    }
+                }
             }
+
+            // Обновляем дату задачи
+            await todoAPI.updateTask(taskId, { due_date: newDate });
+            await loadTasks(); // Перезагружаем задачи для обновления UI
+
+            // Включаем перетаскивание обратно после сохранения
+            toggleTaskDraggable(taskElement, true);
+
+            document.removeEventListener('click', handleOutsideClick);
+        } catch (error) {
+            console.error('Ошибка при обновлении даты:', error);
+            // Возвращаем оригинальную дату в случае ошибки
+            const newSpan = document.createElement('span');
+            newSpan.className = 'task-due-date';
+            newSpan.textContent = originalDate;
+            dateInput.replaceWith(newSpan);
+            changeDateBtn.classList.remove('hidden');
         }
-
-        // Включаем перетаскивание обратно после сохранения
-        toggleTaskDraggable(taskElement, true);
-
-        saveTasks();
-        renderTasks();
-
-        document.removeEventListener('click', handleOutsideClick);
     };
 
     const cancelDateEdit = () => {
@@ -1223,64 +1527,43 @@ function formatDate(dateString) {
 }
 
 // Функция удаления задачи
-function deleteTask(event) {
-    // Получение задачи, у которой была нажата кнопка
-    const taskElement = event.target.closest('.task');
-    const taskList = taskElement.parentNode;
-    const isCompleted = taskElement.classList.contains('completed-task');
+async function deleteTask(event) {
+    try {
+        const taskElement = event.target.closest('.task');
+        const taskId = taskElement.dataset.taskId;
 
-    const taskIndex = Array.from(taskList.children).indexOf(taskElement);
-    if (isCompleted) {
-        tasks.completed.splice(taskIndex, 1);
-    } else {
-        tasks.active.splice(taskIndex, 1);
+        await todoAPI.deleteTask(taskId);
+        await loadTasks(); // Перезагружаем задачи
+    } catch (error) {
+        console.error('Ошибка при удалении задачи:', error);
     }
-
-    updateUI();
-};
+}
 
 // Функция отметки задачи как выполненной/невыполненной
-function completeTask(event) {
-
-    // Получаем задачу, у которой нажата кнопка "отметки выполнения"
-    const currentTask = event.target.closest('.task');
-    if (!currentTask) return;
-
-    // Сохраняем все параметры задачи
-    const originalIndex = parseInt(currentTask.dataset.originalIndex);
-    const isCompleted = currentTask.dataset.isCompleted === 'true';
-    const now = Date.now();
+async function completeTask(event) {
+    const taskElement = event.target.closest('.task');
+    if (!taskElement) return;
 
     try {
-        if (isCompleted) {
-            // Перемещаем из выполненных в активные
-            const task = tasks.completed[originalIndex];
-            if (task) {
-                // Восстанавливаем позицию
-                const originalPos = task.originalPosition !== undefined ?
-                    Math.min(task.originalPosition, tasks.active.length) : 0;
+        const taskId = taskElement.dataset.taskId;
+        const isCompleted = taskElement.dataset.isCompleted === 'true';
 
-                tasks.active.splice(originalPos, 0, task);
-                tasks.completed.splice(originalIndex, 1);
-            }
+        if (!isCompleted) {
+            // Если задача отмечается как выполненная, отключаем уведомления
+            await todoAPI.updateTaskNotifications(taskId, {
+                notifications_enabled: false,
+                notification_time: null
+            });
+            await todoAPI.completeTask(taskId);
         } else {
-            // Перемещаем из активных в выполненные
-            const task = tasks.active[originalIndex];
-            if (task) {
-                // Сохраняем текущую позицию
-                task.originalPosition = originalIndex;
-                task.lastStatusChange = now;
-                tasks.completed.unshift(task);
-                tasks.active.splice(originalIndex, 1);
-            }
+            await todoAPI.uncompleteTask(taskId);
         }
 
-        updateUI();
-
-    } catch (e) {
-        console.error('Ошибка при перемещении задачи:', e);
+        await loadTasks(); // Перезагружаем задачи
+    } catch (error) {
+        console.error('Ошибка при изменении статуса задачи:', error);
     }
-};
+}
 
 // Функция инициализации диаграммы
 function initPieChart() {
@@ -1346,7 +1629,7 @@ function getDataByCategory(completed) {
 
     // Считаем задачи по категориям
     taskList.forEach(task => {
-        const categoryId = task.category || defaultCategoryId;
+        const categoryId = task.category_id || defaultCategoryId;
         categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
     });
 
@@ -1431,53 +1714,8 @@ function updateStats() {
     }
 }
 
-// Функция для инициализации графика продуктивности
-function initProductivityChart() {
-    const ctx = document.getElementById('productivityChart').getContext('2d');
-
-    // Если график уже есть, то уничтожаем его
-    if (productivityChart) {
-        productivityChart.destroy();
-    }
-
-    // Получаем данные для графика
-    const { labels, data } = getProductivityData();
-
-    productivityChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Выполнено задач',
-                data: data,
-                backgroundColor: '#4CAF50',
-                borderColor: '#388E3C',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Количество задач'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Дата'
-                    }
-                }
-            }
-        }
-    });
-}
-
 // Функция для получения данных продуктивности
-function getProductivityData() {
+async function getProductivityData() {
     const periodSelect = document.getElementById('productivity-period');
     const period = periodSelect.value;
 
@@ -1506,26 +1744,38 @@ function getProductivityData() {
         startDate.setHours(0, 0, 0, 0);
     }
 
-    // Создаем массив дат для отображения
-    const dateArray = [];
-    const currentDate = new Date(startDate);
+    try {
+        // Получаем данные с сервера
+        const productivityData = await todoAPI.getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
 
-    while (currentDate <= endDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+        // Создаем массив дат для отображения
+        const dateArray = [];
+        const currentDate = new Date(startDate);
+
+        while (currentDate <= endDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Подготавливаем данные для графика
+        const labels = dateArray.map(date => formatDateForChart(date));
+        const data = dateArray.map(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = productivityData.find(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
+        });
+
+        return { labels, data };
+    } catch (error) {
+        console.error('Ошибка при получении данных продуктивности:', error);
+        return { labels: [], data: [] };
     }
-
-    // Подготавливаем данные для графика
-    const labels = dateArray.map(date => formatDateForChart(date));
-    const data = dateArray.map(date => {
-        return tasks.completed.filter(task => {
-            if (!task.lastStatusChange) return false;
-            const taskDate = new Date(task.lastStatusChange);
-            return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-        }).length;
-    });
-
-    return { labels, data };
 }
 
 // Форматирование даты для графика
@@ -1536,14 +1786,62 @@ function formatDateForChart(date) {
     });
 }
 
+// Функция для инициализации графика продуктивности
+async function initProductivityChart() {
+    const ctx = document.getElementById('productivityChart').getContext('2d');
+
+    // Если график уже есть, то уничтожаем его
+    if (productivityChart) {
+        productivityChart.destroy();
+    }
+
+    // Получаем данные для графика
+    const { labels, data } = await getProductivityData();
+
+    productivityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Выполнено задач',
+                data: data,
+                backgroundColor: '#4CAF50',
+                borderColor: '#388E3C',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Количество задач'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Дата'
+                    }
+                }
+            }
+        }
+    });
+}
+
 // Обновление графика продуктивности
-function updateProductivityChart() {
+async function updateProductivityChart() {
     if (document.getElementById('statistics').classList.contains('active')) {
-        initProductivityChart();
+        await initProductivityChart();
     }
 }
 
-// Функция инициализации модального окна экспорта
+// Функция для инициализации модального окна экспорта
 function initExportModal() {
     const modal = document.createElement('div');
     modal.className = 'export-modal';
@@ -2054,63 +2352,120 @@ async function addProductivityChartToPdf(docDefinition, productivityType) {
         startDate.setHours(0, 0, 0, 0);
     }
 
-    // Создаем массив дат для отображения
-    const dateArray = [];
-    const currentDate = new Date(startDate);
+    try {
+        // Получаем данные с сервера
+        const productivityData = await todoAPI.getProductivityData({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        });
 
-    while (currentDate <= endDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
+        // Создаем массив дат для отображения
+        const dateArray = [];
+        const currentDate = new Date(startDate);
 
-    // Подготавливаем данные для графика
-    const labels = dateArray.map(date => formatDateForChart(date));
-    const data = dateArray.map(date => {
-        return tasks.completed.filter(task => {
-            if (!task.lastStatusChange) return false;
-            const taskDate = new Date(task.lastStatusChange);
-            return taskDate >= date && taskDate < new Date(date.getTime() + 24 * 60 * 60 * 1000);
-        }).length;
-    });
+        while (currentDate <= endDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
-    // Добавляем заголовок графика
-    docDefinition.content.push({
-        text: 'График продуктивности',
-        style: 'subheader',
-        margin: [0, 20, 0, 10]
-    });
+        // Подготавливаем данные для графика
+        const labels = dateArray.map(date => formatDateForChart(date));
+        const data = dateArray.map(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = productivityData.find(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.toISOString().split('T')[0] === dateStr;
+            });
+            return dayData ? dayData.completed_count : 0;
+        });
 
-    // Добавляем описание периода
-    docDefinition.content.push({
-        text: `Период: с ${formatDate(startDate.toISOString())} по ${formatDate(endDate.toISOString())}`,
-        margin: [0, 0, 0, 10]
-    });
+        // Добавляем заголовок графика
+        docDefinition.content.push({
+            text: 'График продуктивности',
+            style: 'subheader',
+            margin: [0, 20, 0, 10]
+        });
 
-    // Создаем данные для графика
-    const chartData = {
-        labels: labels,
-        datasets: [
-            {
+        // Добавляем описание периода
+        docDefinition.content.push({
+            text: `Период: с ${formatDate(startDate)} по ${formatDate(endDate)}`,
+            margin: [0, 0, 0, 10]
+        });
+
+        // Создаем данные для графика
+        const chartData = {
+            labels: labels,
+            datasets: [{
                 label: 'Выполнено задач',
                 data: data,
                 backgroundColor: '#4CAF50',
                 borderColor: '#388E3C',
                 borderWidth: 1
+            }]
+        };
+
+        // Создаем временный canvas для графика
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+
+        // Создаем график
+        new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                animation: false
             }
-        ]
-    };
+        });
 
-    try {
         // Получаем изображение графика
-        const chartImage = await getBarChartImage(chartData);
+        const chartImage = canvas.toDataURL('image/png');
 
-        // Добавляем сам график
+        // Добавляем график в PDF
         docDefinition.content.push({
             image: chartImage,
             width: 500,
             alignment: 'center',
             margin: [0, 0, 0, 20]
         });
+
+        // Добавляем статистику
+        const totalCompleted = data.reduce((sum, count) => sum + count, 0);
+        const avgCompleted = totalCompleted / data.length;
+
+        docDefinition.content.push({
+            text: [
+                `Всего выполнено задач за период: ${totalCompleted}\n`,
+                `Среднее количество выполненных задач в день: ${avgCompleted.toFixed(1)}`
+            ],
+            margin: [0, 0, 0, 20]
+        });
+
     } catch (error) {
         console.error('Ошибка при создании графика продуктивности:', error);
         docDefinition.content.push({
@@ -2196,3 +2551,5 @@ function toggleTaskDraggable(taskElement, isDraggable) {
         taskElement.draggable = isDraggable;
     }
 }
+
+window.onload = init;

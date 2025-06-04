@@ -6,25 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List</title>
     <link rel="stylesheet" href="css/style.css">
-
-    <!-- Toast UI Editor зависимости -->
-    <link rel="stylesheet" href="./node_modules/@toast-ui/editor/dist/toastui-editor.css">
-    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+    <link rel="stylesheet" href="css/notifications.css">
 
     <!-- Библиотеки -->
-    <!-- Диграмма -->
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
     <script src="./node_modules/chart.js/dist/chart.umd.js"></script>
-
-    <!-- Для экспорта в PDF -->
     <script src="./node_modules/pdfmake/build/pdfmake.min.js"></script>
     <script src="./node_modules/pdfmake/build/vfs_fonts.js"></script>
 
-    <!-- Telegram Widget -->
-    <script src="https://telegram.org/js/telegram-widget.js?22"></script>
-
-    <!-- Основные скрипты -->
-    <script src="./dist/bundle.js"></script>
+    <!-- Скрипты авторизации -->
     <script src="javascript/auth.js"></script>
+
+    <!-- Основной скрипт -->
+    <script src="dist/bundle.js" defer></script>
 </head>
 
 <body>
@@ -36,12 +30,14 @@
             <h1 class="header-title">To Do List by @Ziburk</h1>
         </div>
         <div class="profile-wrapper">
-            <div id="telegram-login-container">
-                <!-- Здесь будет кнопка входа через Telegram -->
-            </div>
+            <div id="telegram-login-container" class="hidden"></div>
             <div id="user-profile" class="hidden">
-                <img id="user-avatar" class="profile-ico" src="" alt="profile">
-                <button id="logout-button" class="logout-button">Выйти</button>
+                <img id="user-avatar" class="user-avatar" alt="Аватар пользователя">
+                <span id="user-name" class="user-name"></span>
+                <button id="logout-button" class="logout-button">
+                    <img src="img/logout.svg" alt="Выйти" class="logout-icon">
+                    Выйти
+                </button>
             </div>
         </div>
     </header>
