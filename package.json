@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "build": "webpack",
-    "dev": "concurrently \"npm run start\" \"npm run build\""
+    "dev": "concurrently \"npm run build\" \"npm run start\""
   },
   "repository": {
     "type": "git",
