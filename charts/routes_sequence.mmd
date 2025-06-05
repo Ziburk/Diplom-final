@@ -1,0 +1,57 @@
+sequenceDiagram
+    participant Client
+    participant Router as index.js Router
+    participant Auth as authRoutes
+    participant Users as userRoutes
+    participant Categories as categoryRoutes
+    participant Tasks as taskRoutes
+    participant MW as Middleware
+    participant Controllers
+    participant DB
+
+    Note over Router: Инициализация маршрутов
+
+    %% Аутентификация
+    Client->>Router: POST /auth/telegram/login
+    Router->>Auth: Перенаправление
+    Auth->>Controllers: TelegramController.handleTelegramAuth
+    Controllers->>DB: Проверка/Создание пользователя
+    DB-->>Controllers: Результат
+    Controllers-->>Client: JWT токен
+
+    %% Работа с задачами
+    Client->>Router: GET /tasks
+    Router->>Tasks: Перенаправление
+    Tasks->>MW: Проверка auth middleware
+    MW->>Tasks: Подтверждение авторизации
+    Tasks->>Controllers: TaskController.getAllTasks
+    Controllers->>DB: Запрос задач
+    DB-->>Controllers: Данные задач
+    Controllers-->>Client: JSON с задачами
+
+    %% Работа с категориями
+    Client->>Router: GET /categories
+    Router->>Categories: Перенаправление
+    Categories->>MW: Проверка auth middleware
+    MW->>Categories: Подтверждение авторизации
+    Categories->>Controllers: CategoryController.getAllCategories
+    Controllers->>DB: Запрос категорий
+    DB-->>Controllers: Данные категорий
+    Controllers-->>Client: JSON с категориями
+
+    %% Работа с пользователями
+    Client->>Router: GET /users
+    Router->>Users: Перенаправление
+    Users->>MW: Проверка auth middleware
+    MW->>Users: Подтверждение авторизации
+    Users->>Controllers: UserController
+    Controllers->>DB: Запрос данных пользователя
+    DB-->>Controllers: Данные пользователя
+    Controllers-->>Client: JSON с данными пользователя
+
+    Note over Router: Все маршруты защищены middleware аутентификации
+
+    style Router fill:#f9f,stroke:#333,stroke-width:2px
+    style MW fill:#ffd,stroke:#333,stroke-width:2px
+    style Controllers fill:#dfd,stroke:#333,stroke-width:2px
+    style DB fill:#bbf,stroke:#333,stroke-width:2px 

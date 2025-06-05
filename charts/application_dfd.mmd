@@ -1,0 +1,64 @@
+graph TD
+    %% Внешние сущности
+    User((Пользователь))
+    TG((Telegram))
+
+    %% Процессы
+    Auth[Система аутентификации]
+    TaskMgmt[Управление задачами]
+    CatMgmt[Управление категориями]
+    NotifSys[Система уведомлений]
+    Stats[Система статистики]
+
+    %% Хранилища данных
+    DB[(База данных PostgreSQL)]
+    subgraph Таблицы БД
+        Users[(Пользователи)]
+        Tasks[(Задачи)]
+        Categories[(Категории)]
+        NotifHistory[(История уведомлений)]
+    end
+
+    %% Потоки данных от пользователя
+    User -->|Регистрация/Вход| Auth
+    User -->|Создание/Редактирование задач| TaskMgmt
+    User -->|Управление категориями| CatMgmt
+    User -->|Просмотр статистики| Stats
+
+    %% Потоки данных Telegram
+    TG -->|Аутентификация| Auth
+    TG -->|Получение уведомлений| NotifSys
+    NotifSys -->|Отправка уведомлений| TG
+
+    %% Потоки данных аутентификации
+    Auth -->|Проверка данных| Users
+    Auth -->|JWT токен| User
+
+    %% Потоки данных задач
+    TaskMgmt -->|Сохранение задач| Tasks
+    TaskMgmt -->|Получение задач| Tasks
+    Tasks -->|Данные для уведомлений| NotifSys
+    Tasks -->|Данные для анализа| Stats
+
+    %% Потоки данных категорий
+    CatMgmt -->|Сохранение категорий| Categories
+    CatMgmt -->|Получение категорий| Categories
+    Categories -->|Данные для анализа| Stats
+
+    %% Потоки данных уведомлений
+    NotifSys -->|Запись истории| NotifHistory
+    NotifHistory -->|Проверка отправленных| NotifSys
+
+    %% Потоки данных статистики
+    Stats -->|Статистика пользователя| User
+
+    %% Стили
+    classDef external fill:#f9f,stroke:#333,stroke-width:2px
+    classDef process fill:#dfd,stroke:#333,stroke-width:2px
+    classDef storage fill:#bbf,stroke:#333,stroke-width:2px
+    classDef subStorage fill:#ddf,stroke:#333,stroke-width:1px
+
+    class User,TG external
+    class Auth,TaskMgmt,CatMgmt,NotifSys,Stats process
+    class DB storage
+    class Users,Tasks,Categories,NotifHistory subStorage 
