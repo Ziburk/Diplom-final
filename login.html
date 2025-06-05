@@ -5,29 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List - Вход</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            text-align: center;
-        }
-        h1 {
-            margin-bottom: 30px;
-        }
-    </style>
+    <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
     <div class="container">
+        <img src="img/logo.png" alt="To-Do List Logo" class="logo">
         <h1>To Do List</h1>
+        <p class="welcome-text">
+            Добро пожаловать в ваш персональный планировщик задач! 
+            Организуйте свою работу эффективно и достигайте большего.
+        </p>
+        
+        <div class="features">
+            <h3>Возможности приложения:</h3>
+            <ul>
+                <li>Создание и управление задачами</li>
+                <li>Категоризация задач</li>
+                <li>Отслеживание прогресса</li>
+                <li>Уведомления о сроках</li>
+                <li>Статистика выполнения</li>
+                <li>Экспорт данных в PDF</li>
+            </ul>
+        </div>
+
         <div id="telegram-login-container"></div>
+        
+        <p class="login-note">
+            Для входа используйте свой аккаунт Telegram. 
+            Это безопасно и не требует дополнительной регистрации.
+        </p>
     </div>
 
     <script>
