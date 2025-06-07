@@ -77,7 +77,7 @@ function formatDate(dateString) {
 }
 
 // Функция создания календаря
-function createCalendarKeyboard(selectedDate = null) {
+function createCalendarKeyboard(selectedDate = null, isNotification = false) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const currentDate = selectedDate ? new Date(selectedDate) : new Date();
@@ -132,7 +132,8 @@ function createCalendarKeyboard(selectedDate = null) {
         if (isDisabled) {
             days.push(Markup.button.callback(displayDay, 'ignore'));
         } else {
-            days.push(Markup.button.callback(displayDay, `select_date:${formattedDate}`));
+            const callbackPrefix = isNotification ? 'select_notification_date' : 'select_date';
+            days.push(Markup.button.callback(displayDay, `${callbackPrefix}:${formattedDate}`));
         }
         
         // Начинаем новую строку после воскресенья
@@ -151,8 +152,10 @@ function createCalendarKeyboard(selectedDate = null) {
         keyboard.push(days);
     }
     
-    // Добавляем кнопку "Без даты"
-    keyboard.push([Markup.button.callback('Без даты', 'select_date:no_date')]);
+    // Добавляем кнопку "Без даты" только для обычных задач
+    if (!isNotification) {
+        keyboard.push([Markup.button.callback('Без даты', 'select_date:no_date')]);
+    }
     
     return Markup.inlineKeyboard(keyboard);
 }
@@ -594,6 +597,67 @@ bot.action(/^uncomplete_task:(\d+)$/, async (ctx) => {
         ctx.reply('Произошла ошибка при возврате задачи в активные');
     }
 });
+
+// Функция отображения категорий
+async function showCategories(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const categoriesList = categories.map(cat =>
+            `🏷 ${cat.name}`
+        ).join('\n');
+
+        ctx.reply(
+            '🏷 Категории:\n\n' + categoriesList,
+            Markup.inlineKeyboard([
+                [Markup.button.callback('Добавить категорию', 'add_category')],
+                [Markup.button.callback('Показать задачи по категории', 'show_by_category')]
+            ])
+        );
+    } catch (error) {
+        console.error('Ошибка при отображении категорий:', error);
+        ctx.reply('Произошла ошибка при загрузке категорий. Пожалуйста, попробуйте позже.');
+    }
+}
+
+// Функция отображения статистики
+async function showStats(ctx) {
+    try {
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const tasks = await db.getUserTasks(user.user_id);
+        const totalTasks = tasks.active.length + tasks.completed.length;
+        const activeTasksCount = tasks.active.length;
+        const completedTasksCount = tasks.completed.length;
+
+        const completionRate = totalTasks > 0
+            ? Math.round((completedTasksCount / totalTasks) * 100)
+            : 0;
+
+        const message = 
+            '📊 Статистика:\n\n' +
+            `Всего задач: ${totalTasks}\n` +
+            `Активных: ${activeTasksCount}\n` +
+            `Выполненных: ${completedTasksCount}\n` +
+            `Процент выполнения: ${completionRate}%`;
+
+        ctx.reply(message);
+    } catch (error) {
+        console.error('Ошибка при отображении статистики:', error);
+        ctx.reply('Произошла ошибка при загрузке статистики. Пожалуйста, попробуйте позже.');
+    }
+}
 
 // Обработчики текстовых сообщений
 bot.on('text', async (ctx) => {
