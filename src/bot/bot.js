@@ -77,9 +77,9 @@ function formatDate(dateString) {
 }
 
 // Функция создания календаря
-function createCalendarKeyboard(selectedDate = null, isNotification = false) {
+function createCalendarKeyboard(selectedDate = null) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения дат
+    today.setHours(0, 0, 0, 0);
     const currentDate = selectedDate ? new Date(selectedDate) : new Date();
     
     const keyboard = [];
@@ -119,20 +119,19 @@ function createCalendarKeyboard(selectedDate = null, isNotification = false) {
     // Добавляем дни месяца
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-        date.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения
-        const dateStr = date.toISOString();
+        date.setHours(0, 0, 0, 0);
         
-        // Определяем, активна ли кнопка (теперь разрешаем выбор текущего дня)
-        const isDisabled = date < today && date.getTime() !== today.getTime(); // Разрешаем выбор текущей даты
-        const displayDay = day.toString().padStart(2, '0');
+        // Форматируем дату для callback_data
+        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const displayDay = String(day).padStart(2, '0');
+        
+        // Определяем, активна ли кнопка
+        const isDisabled = date < today;
         
         if (isDisabled) {
             days.push(Markup.button.callback(displayDay, 'ignore'));
         } else {
-            const action = isNotification ? 
-                `select_notification_date:${dateStr}` : 
-                `select_date:${dateStr}`;
-            days.push(Markup.button.callback(displayDay, action));
+            days.push(Markup.button.callback(displayDay, `select_date:${formattedDate}`));
         }
         
         // Начинаем новую строку после воскресенья
@@ -150,6 +149,9 @@ function createCalendarKeyboard(selectedDate = null, isNotification = false) {
         }
         keyboard.push(days);
     }
+    
+    // Добавляем кнопку "Без даты"
+    keyboard.push([Markup.button.callback('Без даты', 'select_date:no_date')]);
     
     return Markup.inlineKeyboard(keyboard);
 }
@@ -194,7 +196,7 @@ bot.command('help', (ctx) => {
 });
 
 // Обработка кнопок главного меню
-bot.hears('📝 Добавить задачу', (ctx) => startAddingTask(ctx));
+bot.hears('➕ Добавить задачу', (ctx) => startAddingTask(ctx));
 bot.hears('📋 Список задач', (ctx) => showTasksList(ctx));
 bot.hears('🏷 Категории', (ctx) => showCategories(ctx));
 bot.hears('📊 Статистика', (ctx) => showStats(ctx));
@@ -417,30 +419,70 @@ bot.action(/^edit_title:(\d+)$/, async (ctx) => {
     ctx.reply('Введите новое название задачи:');
 });
 
-bot.action(/^edit_date:(\d+)$/, async (ctx) => {
-    const taskId = ctx.match[1];
-    ctx.session = {
-        state: 'waiting_new_date',
-        taskId: taskId
-    };
-    const keyboard = createCalendarKeyboard();
-    ctx.reply('Выберите новую дату:', Markup.inlineKeyboard(keyboard));
+// Обработчик изменения даты
+bot.action(/^change_date:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        ctx.session = {
+            state: 'waiting_new_date',
+            taskId: taskId
+        };
+        await ctx.reply('Выберите новую дату:', { 
+            reply_markup: createCalendarKeyboard()
+        });
+    } catch (error) {
+        console.error('Ошибка при изменении даты:', error);
+        await ctx.reply('Произошла ошибка при изменении даты');
+    }
 });
 
-bot.action(/^edit_category:(\d+)$/, async (ctx) => {
-    const taskId = ctx.match[1];
-    const user = await db.getOrCreateUser(ctx.from.id, ctx.from.username, ctx.from.first_name, ctx.from.last_name);
-    const categories = await db.getUserCategories(user.user_id);
-    
-    const keyboard = categories.map(category => [
-        Markup.button.callback(category.name, `set_category:${taskId}:${category.category_id}`)
-    ]);
-    keyboard.push([Markup.button.callback('◀️ Назад', `view_task:${taskId}:active`)]);
-    
-    ctx.reply('Выберите новую категорию:', Markup.inlineKeyboard(keyboard));
+// Обработчик изменения категории
+bot.action(/^change_category:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        const categories = await db.getUserCategories(user.user_id);
+        const keyboard = Markup.inlineKeyboard([
+            ...categories.map(category => [
+                Markup.button.callback(category.name, `set_category:${taskId}:${category.category_id}`)
+            ]),
+            [Markup.button.callback('« Назад', `show_task:${taskId}`)]
+        ]);
+
+        await ctx.editMessageText('Выберите новую категорию:', keyboard);
+    } catch (error) {
+        console.error('Ошибка при изменении категории:', error);
+        await ctx.answerCbQuery('Произошла ошибка при изменении категории');
+    }
 });
 
-bot.action(/^delete_task:(\d+)$/, async (ctx) => {
+// Обработчик выбора новой категории
+bot.action(/^set_category:(\d+):(.+)$/, async (ctx) => {
+    try {
+        const [taskId, categoryId] = ctx.match.slice(1);
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        await db.updateTaskCategory(taskId, categoryId, user.user_id);
+        await ctx.answerCbQuery('Категория задачи изменена');
+        await showTaskDetails(ctx, taskId, 'active');
+    } catch (error) {
+        console.error('Ошибка при установке категории:', error);
+        await ctx.answerCbQuery('Произошла ошибка при изменении категории');
+    }
+});
+
+bot.action(/^delete:(\d+)$/, async (ctx) => {
     const taskId = ctx.match[1];
     try {
         const user = await db.getOrCreateUser(
@@ -451,11 +493,11 @@ bot.action(/^delete_task:(\d+)$/, async (ctx) => {
         );
 
         await db.deleteTask(taskId, user.user_id);
-        ctx.reply('Задача удалена');
-        showTasksForManagement(ctx);
+        await ctx.answerCbQuery('Задача удалена');
+        await showTasksList(ctx);
     } catch (error) {
         console.error('Ошибка при удалении задачи:', error);
-        ctx.reply('Произошла ошибка при удалении задачи');
+        await ctx.answerCbQuery('Произошла ошибка при удалении задачи');
     }
 });
 
@@ -550,86 +592,6 @@ bot.action(/^uncomplete_task:(\d+)$/, async (ctx) => {
         ctx.reply('Произошла ошибка при возврате задачи в активные');
     }
 });
-
-bot.action(/^set_category:(\d+):(.+)$/, async (ctx) => {
-    const [taskId, categoryId] = ctx.match.slice(1);
-    try {
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        await db.updateTaskCategory(taskId, categoryId, user.user_id);
-        showTaskDetails(ctx, taskId, 'active');
-    } catch (error) {
-        console.error('Ошибка при изменении категории:', error);
-        ctx.reply('Произошла ошибка при изменении категории');
-    }
-    await ctx.answerCbQuery();
-});
-
-// Функция отображения категорий
-async function showCategories(ctx) {
-    try {
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        const categories = await db.getUserCategories(user.user_id);
-        const categoriesList = categories.map(cat =>
-            `🏷 ${cat.name}`
-        ).join('\n');
-
-        ctx.reply(
-            '🏷 Категории:\n\n' + categoriesList,
-            Markup.inlineKeyboard([
-                [Markup.button.callback('Добавить категорию', 'add_category')],
-                [Markup.button.callback('Показать задачи по категории', 'show_by_category')]
-            ])
-        );
-    } catch (error) {
-        console.error('Ошибка при отображении категорий:', error);
-        ctx.reply('Произошла ошибка при загрузке категорий. Пожалуйста, попробуйте позже.');
-    }
-}
-
-// Функция отображения статистики
-async function showStats(ctx) {
-    try {
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        const tasks = await db.getUserTasks(user.user_id);
-        const totalTasks = tasks.active.length + tasks.completed.length;
-        const activeTasksCount = tasks.active.length;
-        const completedTasksCount = tasks.completed.length;
-
-        const completionRate = totalTasks > 0
-            ? Math.round((completedTasksCount / totalTasks) * 100)
-            : 0;
-
-        const message = 
-            '📊 Статистика:\n\n' +
-            `Всего задач: ${totalTasks}\n` +
-            `Активных: ${activeTasksCount}\n` +
-            `Выполненных: ${completedTasksCount}\n` +
-            `Процент выполнения: ${completionRate}%`;
-
-        ctx.reply(message);
-    } catch (error) {
-        console.error('Ошибка при отображении статистики:', error);
-        ctx.reply('Произошла ошибка при загрузке статистики. Пожалуйста, попробуйте позже.');
-    }
-}
 
 // Обработчики текстовых сообщений
 bot.on('text', async (ctx) => {
@@ -885,18 +847,6 @@ bot.action('change_status', async (ctx) => {
     await ctx.answerCbQuery();
 });
 
-// Обработчик кнопки "Изменить дату"
-bot.action('change_date', async (ctx) => {
-    await askTaskType(ctx, 'change_date');
-    await ctx.answerCbQuery();
-});
-
-// Обработчик кнопки "Изменить категорию"
-bot.action('change_category', async (ctx) => {
-    await askTaskType(ctx, 'change_category');
-    await ctx.answerCbQuery();
-});
-
 // Обработчик кнопки "Удалить"
 bot.action('delete_task', async (ctx) => {
     await askTaskType(ctx, 'delete');
@@ -978,60 +928,64 @@ bot.action(/show_category:(.+)/, async (ctx) => {
 });
 
 // Обработчик выбора даты из календаря
-bot.action(/^select_date:(\d+):(\d+):(\d+)$/, async (ctx) => {
+bot.action(/^select_date:(\d{4})-(\d{2})-(\d{2})$/, async (ctx) => {
     try {
-        if (ctx.session?.state !== 'waiting_date') return;
+        if (!ctx.session?.state) return;
 
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
+        if (ctx.session.state === 'waiting_new_date') {
+            // Обработка изменения даты существующей задачи
+            const taskId = ctx.session.taskId;
+            const [_, year, month, day] = ctx.match;
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            date.setHours(12, 0, 0, 0);
+            const dueDate = date.toISOString();
 
-        const [year, month, day] = ctx.match.slice(1).map(Number);
-        const date = new Date(year, month, day);
-        date.setHours(12, 0, 0, 0);
-        const dueDate = date.toISOString();
-
-        // Получаем текущие активные задачи для определения порядка
-        const tasks = await db.getUserTasks(user.user_id);
-        
-        // Сдвигаем порядок существующих задач
-        if (tasks.active.length > 0) {
-            const updatePromises = tasks.active.map(t => 
-                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+            const user = await db.getOrCreateUser(
+                ctx.from.id,
+                ctx.from.username,
+                ctx.from.first_name,
+                ctx.from.last_name
             );
-            await Promise.all(updatePromises);
+
+            await db.updateTaskDate(taskId, user.user_id, dueDate);
+            await ctx.answerCbQuery('Дата задачи обновлена');
+            delete ctx.session;
+            await showTaskDetails(ctx, taskId, 'active');
+        } else if (ctx.session.state === 'waiting_date') {
+            // Обработка выбора даты для новой задачи
+            const user = await db.getOrCreateUser(
+                ctx.from.id,
+                ctx.from.username,
+                ctx.from.first_name,
+                ctx.from.last_name
+            );
+
+            const [_, year, month, day] = ctx.match;
+            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            date.setHours(12, 0, 0, 0);
+            const dueDate = date.toISOString();
+
+            const task = await db.createTask(
+                user.user_id,
+                ctx.session.newTask.title,
+                ctx.session.newTask.category,
+                dueDate
+            );
+
+            await ctx.reply(
+                'Задача успешно создана! 👍\n' +
+                `Название: ${task.title}\n` +
+                `Дата: ${formatDate(task.due_date)}`
+            );
+            delete ctx.session;
         }
-
-        // Создаем задачу с порядком 0 (в начале списка)
-        const task = await db.createTask(
-            user.user_id,
-            ctx.session.newTask.title,
-            ctx.session.newTask.category,
-            dueDate,
-            0 // Устанавливаем order = 0 для новой задачи
-        );
-
-        const categories = await db.getUserCategories(user.user_id);
-        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
-
-        await ctx.editMessageText(
-            'Задача успешно добавлена! 👍\n' +
-            `Название: ${task.title}\n` +
-            `Категория: ${category ? category.name : 'Без категории'}\n` +
-            `Дата: ${formatDate(task.due_date)}`
-        );
-
-        delete ctx.session;
     } catch (error) {
-        console.error('Ошибка при создании задачи:', error);
-        ctx.reply('Произошла ошибка при создании задачи');
+        console.error('Ошибка при обработке даты:', error);
+        await ctx.answerCbQuery('Произошла ошибка при обработке даты');
     }
 });
 
-// Обработчик выбора "Без даты"
+// Обработчик выбора "Без даты" для новой задачи
 bot.action('select_date:no_date', async (ctx) => {
     try {
         if (ctx.session?.state !== 'waiting_date') return;
@@ -1078,32 +1032,6 @@ bot.action('select_date:no_date', async (ctx) => {
         console.error('Ошибка при создании задачи:', error);
         ctx.reply('Произошла ошибка при создании задачи');
     }
-});
-
-// Обработчик изменения категории задачи
-bot.action(/change_task_category:(\d+):(.+)/, async (ctx) => {
-    try {
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        const [_, taskId, categoryId] = ctx.match;
-        
-        // Обновляем категорию задачи в базе данных
-        await db.updateTaskCategory(parseInt(taskId), categoryId, user.user_id);
-        
-        await ctx.reply('Категория задачи успешно изменена! 🏷');
-        
-        // Показываем обновленный список задач
-        await showTasksList(ctx);
-    } catch (error) {
-        console.error('Ошибка при изменении категории задачи:', error);
-        ctx.reply('Произошла ошибка при изменении категории. Пожалуйста, попробуйте позже.');
-    }
-    await ctx.answerCbQuery();
 });
 
 // Обработчик добавления новой категории
@@ -1583,5 +1511,45 @@ bot.action(/^show_task:(\d+)$/, async (ctx) => {
         await showTaskDetails(ctx, taskId);
     } catch (error) {
         console.error('Ошибка при возврате к деталям задачи:', error);
+    }
+});
+
+// Обработчик отметки задачи выполненной
+bot.action(/^complete:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        await db.completeTask(taskId, user.user_id);
+        await ctx.answerCbQuery('Задача отмечена как выполненная');
+        await showTaskDetails(ctx, taskId, 'completed');
+    } catch (error) {
+        console.error('Ошибка при выполнении задачи:', error);
+        await ctx.answerCbQuery('Произошла ошибка при выполнении задачи');
+    }
+});
+
+// Обработчик возврата задачи в активные
+bot.action(/^uncomplete:(\d+)$/, async (ctx) => {
+    try {
+        const taskId = ctx.match[1];
+        const user = await db.getOrCreateUser(
+            ctx.from.id,
+            ctx.from.username,
+            ctx.from.first_name,
+            ctx.from.last_name
+        );
+
+        await db.uncompleteTask(taskId, user.user_id);
+        await ctx.answerCbQuery('Задача возвращена в активные');
+        await showTaskDetails(ctx, taskId, 'active');
+    } catch (error) {
+        console.error('Ошибка при возврате задачи в активные:', error);
+        await ctx.answerCbQuery('Произошла ошибка при возврате задачи');
     }
 }); 

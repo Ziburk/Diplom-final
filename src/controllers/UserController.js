@@ -75,6 +75,17 @@ class UserController {
             res.status(500).json({ error: 'Ошибка при удалении аккаунта' });
         }
     }
+
+    static async updateUser(req, res) {
+        try {
+            const userId = req.params.id;
+            const user = await User.update(userId, req.body);
+            res.json(user);
+        } catch (error) {
+            console.error('Ошибка при обновлении пользователя:', error);
+            res.status(500).json({ error: 'Ошибка при обновлении пользователя' });
+        }
+    }
 }
 
 module.exports = UserController;

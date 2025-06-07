@@ -40,18 +40,20 @@ const notificationService = {
 
                     // Записываем в историю уведомлений
                     await pool.query(
-                        `INSERT INTO notification_history (task_id, user_id, notification_type, status)
-                         VALUES ($1, $2, 'telegram', 'sent')`,
-                        [task.task_id, task.user_id]
+                        `INSERT INTO notification_history (task_id, user_id, status)
+                         VALUES ($1, $2, $3)
+                         RETURNING *`,
+                        [task.task_id, task.user_id, 'sent']
                     );
                 } catch (error) {
                     console.error(`Ошибка при отправке уведомления для задачи ${task.task_id}:`, error);
                     
                     // Записываем неудачную попытку в историю
                     await pool.query(
-                        `INSERT INTO notification_history (task_id, user_id, notification_type, status)
-                         VALUES ($1, $2, 'telegram', 'failed')`,
-                        [task.task_id, task.user_id]
+                        `INSERT INTO notification_history (task_id, user_id, status)
+                         VALUES ($1, $2, $3)
+                         RETURNING *`,
+                        [task.task_id, task.user_id, 'failed']
                     );
                 }
             }

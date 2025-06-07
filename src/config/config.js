@@ -13,14 +13,7 @@ const config = {
     
     // JWT конфигурация
     jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    
-    // Настройки для уведомлений
-    notificationTypes: {
-        HOUR_BEFORE: 'hour_before',
-        DAY_BEFORE: 'day_before',
-        WEEK_BEFORE: 'week_before'
-    }
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h'
 };
 
 module.exports = config; 

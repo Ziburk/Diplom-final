@@ -25,12 +25,7 @@ const auth = async (req, res, next) => {
         const user = await User.getById(decoded.user_id);
         
         if (!user) {
-            throw new Error('Пользователь не найден');
-        }
-
-        // Проверяем активность пользователя
-        if (!user.is_active) {
-            return res.status(403).json({ error: 'Аккаунт деактивирован' });
+            return res.status(401).json({ error: 'Пользователь не найден' });
         }
 
         // Добавляем информацию о пользователе в объект запроса

@@ -11,7 +11,6 @@ CREATE TABLE telegram_users (
     username VARCHAR(50),
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -50,7 +49,6 @@ CREATE TABLE notification_history (
     task_id INTEGER REFERENCES tasks(task_id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES telegram_users(user_id) ON DELETE CASCADE,
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    notification_type VARCHAR(20),
     status VARCHAR(20) CHECK (status IN ('sent', 'failed', 'delivered'))
 );
 

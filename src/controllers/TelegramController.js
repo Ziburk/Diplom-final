@@ -70,11 +70,7 @@ class TelegramController {
             const user = await User.getById(userId);
 
             if (!user) {
-                return res.status(401).json({ error: 'Пользователь не найден' });
-            }
-
-            if (!user.is_active) {
-                return res.status(403).json({ error: 'Аккаунт деактивирован' });
+                return res.status(404).json({ error: 'Пользователь не найден' });
             }
 
             // Генерируем новый токен
