@@ -254,6 +254,7 @@ table {
 .task-list {
   display: grid;
   grid-row-gap: 15px;
+  margin: 0 0 50px 0;
 }
 
 .task {
@@ -1127,10 +1128,6 @@ table {
           align-items: center;
 }
 
-.footer {
-  background-color: gray;
-  min-height: 300px;
-}
 
 body {
   font-family: "Montserrat";
