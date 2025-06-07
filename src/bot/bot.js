@@ -122,7 +122,8 @@ function createCalendarKeyboard(selectedDate = null) {
         date.setHours(0, 0, 0, 0);
         
         // Форматируем дату для callback_data
-        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const month = date.getMonth() + 1;
+        const formattedDate = `${date.getFullYear()}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const displayDay = String(day).padStart(2, '0');
         
         // Определяем, активна ли кнопка
@@ -427,8 +428,9 @@ bot.action(/^change_date:(\d+)$/, async (ctx) => {
             state: 'waiting_new_date',
             taskId: taskId
         };
-        await ctx.reply('Выберите новую дату:', { 
-            reply_markup: createCalendarKeyboard()
+        await ctx.reply('Выберите новую дату:', {
+            parse_mode: 'HTML',
+            ...createCalendarKeyboard()
         });
     } catch (error) {
         console.error('Ошибка при изменении даты:', error);
@@ -770,10 +772,10 @@ bot.action(/^select_category:(.+)$/, async (ctx) => {
     try {
         if (ctx.session?.state === 'waiting_category') {
             ctx.session.newTask.category = ctx.match[1];
-            await ctx.reply(
-                'Выберите дату выполнения:',
-                Markup.inlineKeyboard(createCalendarKeyboard())
-            );
+            await ctx.reply('Выберите дату выполнения:', {
+                parse_mode: 'HTML',
+                ...createCalendarKeyboard()
+            });
             ctx.session.state = 'waiting_date';
         }
         await ctx.answerCbQuery();
@@ -1042,10 +1044,24 @@ bot.action('add_category', async (ctx) => {
 });
 
 // Обработчик навигации по календарю
-bot.action(/calendar:(\d+):(-?\d+)/, async (ctx) => {
-    const [_, yearStr, monthStr] = ctx.match;
-    const year = parseInt(yearStr);
-    const month = parseInt(monthStr);
+bot.action(/calendar:(\d+):(\d+):(prev|next)/, async (ctx) => {
+    const [_, yearStr, monthStr, direction] = ctx.match;
+    let year = parseInt(yearStr);
+    let month = parseInt(monthStr);
+
+    if (direction === 'prev') {
+        month--;
+        if (month < 0) {
+            month = 11;
+            year--;
+        }
+    } else {
+        month++;
+        if (month > 11) {
+            month = 0;
+            year++;
+        }
+    }
 
     // Проверяем валидность даты
     const date = new Date(year, month);
