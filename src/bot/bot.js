@@ -361,6 +361,12 @@ async function showTaskDetails(ctx, taskId, status) {
         const statusEmoji = task.status === 'completed' ? '✅' : '📝';
 
         let message = `${statusEmoji} <b>${task.title}</b>\n\n`;
+        
+        // Добавляем описание задачи, если оно есть
+        if (task.description && task.description.trim()) {
+            message += `📄 Описание:\n${task.description}\n\n`;
+        }
+        
         message += `🏷 Категория: ${category.name}\n`;
         message += `📅 Срок: ${formatDate(task.due_date)}\n`;
         
@@ -387,6 +393,9 @@ async function showTaskDetails(ctx, taskId, status) {
             [
                 Markup.button.callback('🏷 Изменить категорию', `change_category:${taskId}`),
                 Markup.button.callback('🔔 Настройка уведомлений', `notifications:${taskId}`)
+            ],
+            [
+                Markup.button.callback('📝 Изменить описание', `edit_description:${taskId}`)
             ],
             [
                 task.status === 'completed' 
@@ -704,6 +713,21 @@ bot.on('text', async (ctx) => {
                 } catch (error) {
                     console.error('Ошибка при обновлении названия задачи:', error);
                     ctx.reply('Произошла ошибка при обновлении названия задачи');
+                }
+                break;
+
+            case 'waiting_new_description':
+                const descTaskId = ctx.session.taskId;
+                const newDescription = ctx.message.text === '-' ? '' : ctx.message.text;
+
+                try {
+                    await db.updateTaskDescription(descTaskId, newDescription);
+                    ctx.session = {};
+                    await ctx.reply('Описание задачи обновлено');
+                    showTaskDetails(ctx, descTaskId, 'active');
+                } catch (error) {
+                    console.error('Ошибка при обновлении описания задачи:', error);
+                    ctx.reply('Произошла ошибка при обновлении описания задачи');
                 }
                 break;
 
@@ -1657,4 +1681,14 @@ bot.action(/^uncomplete:(\d+)$/, async (ctx) => {
         console.error('Ошибка при возврате задачи в активные:', error);
         await ctx.answerCbQuery('Произошла ошибка при возврате задачи');
     }
+});
+
+// Обработчик изменения описания
+bot.action(/^edit_description:(\d+)$/, async (ctx) => {
+    const taskId = ctx.match[1];
+    ctx.session = {
+        state: 'waiting_new_description',
+        taskId: taskId
+    };
+    ctx.reply('Введите новое описание задачи:\n(Отправьте "-" чтобы удалить описание)');
 }); 
