@@ -122,8 +122,7 @@ function createCalendarKeyboard(selectedDate = null, isNotification = false) {
         date.setHours(0, 0, 0, 0);
         
         // Форматируем дату для callback_data
-        const month = date.getMonth() + 1;
-        const formattedDate = `${date.getFullYear()}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const displayDay = String(day).padStart(2, '0');
         
         // Определяем, активна ли кнопка
@@ -1031,18 +1030,36 @@ bot.action(/^select_date:(\d{4})-(\d{2})-(\d{2})$/, async (ctx) => {
             date.setHours(12, 0, 0, 0);
             const dueDate = date.toISOString();
 
+            // Получаем текущие активные задачи для определения порядка
+            const tasks = await db.getUserTasks(user.user_id);
+            
+            // Сдвигаем порядок существующих задач
+            if (tasks.active.length > 0) {
+                const updatePromises = tasks.active.map(t => 
+                    db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+                );
+                await Promise.all(updatePromises);
+            }
+
+            // Создаем задачу с порядком 0 (в начале списка)
             const task = await db.createTask(
                 user.user_id,
                 ctx.session.newTask.title,
                 ctx.session.newTask.category,
-                dueDate
+                dueDate,
+                0 // Устанавливаем order = 0 для новой задачи
             );
 
-            await ctx.reply(
-                'Задача успешно создана! 👍\n' +
+            const categories = await db.getUserCategories(user.user_id);
+            const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+
+            await ctx.editMessageText(
+                'Задача успешно добавлена! 👍\n' +
                 `Название: ${task.title}\n` +
+                `Категория: ${category ? category.name : 'Без категории'}\n` +
                 `Дата: ${formatDate(task.due_date)}`
             );
+
             delete ctx.session;
         }
     } catch (error) {
@@ -1135,9 +1152,8 @@ bot.action(/calendar:(\d+):(\d+):(prev|next)/, async (ctx) => {
         return;
     }
 
-    await ctx.editMessageReplyMarkup({
-        inline_keyboard: createCalendarKeyboard(date)
-    });
+    const keyboard = createCalendarKeyboard(date);
+    await ctx.editMessageReplyMarkup(keyboard.reply_markup);
     await ctx.answerCbQuery();
 });
 
