@@ -1,0 +1,26 @@
+.profile-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+#user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    background-color: #fff;
+}
+
+.user-name {
+    color: #fff;
+    font-weight: 500;
+    font-size: 16px;
+}
+

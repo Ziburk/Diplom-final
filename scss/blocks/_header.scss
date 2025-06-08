@@ -1,9 +1,11 @@
 .header {
     min-height: 71px;
-    background-color: #FFF;
+    background-color: #1976D2;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     &-wrapper {
         display: flex;
@@ -11,25 +13,14 @@
     }
 
     &-logo {
-        height: 65px;
+        height: 50px;
         width: auto;
-        margin: 0 0 0 50px;
     }
 
     &-title {
         @include font(22px, 1.28, 700);
         margin: 0 0 0 15px;
-        text-transform: uppercase;
-    }
-}
-
-.profile-link {
-    margin: 0 200px 0 0;
-
-    &:hover,
-    &:focus {
-        cursor: pointer;
-        opacity: 0.7;
+        color: #fff;
     }
 }
 

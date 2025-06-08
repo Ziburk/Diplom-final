@@ -133,69 +133,38 @@ table {
 .header {
   min-height: 71px;
   background-color: #1976D2;
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  justify-content: space-between;
+  align-items: center;
   padding: 0 20px;
-  -webkit-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 .header-wrapper {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
 }
+
 .header-logo {
   height: 50px;
   width: auto;
+  margin-right: 15px;
 }
+
 .header-title {
   font-size: 22px;
   line-height: 1.28;
   font-weight: 700;
-  font-style: normal;
-  margin: 0 0 0 15px;
   color: #fff;
+  margin: 0;
 }
 
-.telegram-bot-button {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: #0088cc;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  -webkit-transition: background-color 0.2s;
-  transition: background-color 0.2s;
-  margin: 0 15px;
+.profile-link {
+  margin: 0 200px 0 0;
 }
-.telegram-bot-button:hover, .telegram-bot-button:focus {
-  background-color: #006699;
-}
-
-.telegram-icon {
-  width: 20px;
-  height: 20px;
-  -webkit-filter: brightness(0) invert(1);
-          filter: brightness(0) invert(1);
+.profile-link:hover, .profile-link:focus {
+  cursor: pointer;
+  opacity: 0.7;
 }
 
 .main {
@@ -317,7 +286,6 @@ table {
   font-weight: 500;
   font-style: normal;
   margin: 0 0 0 15px;
-  text-wrap: nowrap;
   cursor: default;
 }
 .task .task-title-wrapper {
@@ -524,11 +492,6 @@ table {
 
 .task-description-text a:hover {
   text-decoration: underline;
-}
-
-[title] {
-  position: relative;
-  cursor: help;
 }
 
 .stats-section {
@@ -1055,6 +1018,10 @@ table {
   margin-right: 8px;
 }
 
+.export-task-item label {
+  cursor: default;
+}
+
 .no-tasks-message {
   color: #777;
   font-style: italic;
@@ -1123,29 +1090,38 @@ table {
   display: none !important;
 }
 
-.logout-button {
+#user-profile {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #fff;
-  -webkit-transition: background-color 0.2s;
-  transition: background-color 0.2s;
-}
-.logout-button:hover, .logout-button:focus {
-  background: rgba(255, 255, 255, 0.2);
-  cursor: pointer;
+  gap: 10px;
 }
 
-.logout-icon {
-  width: 20px;
-  height: 20px;
-  color: #fff;
+.logout-button {
+  padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  -webkit-transition: background-color 0.3s;
+  transition: background-color 0.3s;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+}
+
+#user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 #telegram-login-container {
@@ -1157,241 +1133,6 @@ table {
           align-items: center;
 }
 
-.notification-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  margin-right: 5px;
-  -webkit-transition: -webkit-transform 0.2s;
-  transition: -webkit-transform 0.2s;
-  transition: transform 0.2s;
-  transition: transform 0.2s, -webkit-transform 0.2s;
-}
-.notification-btn:hover, .notification-btn:focus {
-  -webkit-transform: scale(1.1);
-          transform: scale(1.1);
-}
-
-.notification-btn img {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
-}
-.notification-btn img .notification-btn.active {
-  color: #4CAF50;
-}
-
-.notification-dropdown {
-  position: absolute;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  -webkit-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 15px;
-  z-index: 1000;
-  min-width: 250px;
-}
-.notification-dropdown h4 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 14px;
-}
-
-.notification-form {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  gap: 10px;
-}
-
-.notification-datetime {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  gap: 10px;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-}
-.notification-datetime input[type=date],
-.notification-datetime input[type=time] {
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-/* Стили для переключателя */
-.notification-toggle {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-}
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
-}
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  -webkit-transition: 0.4s;
-  transition: 0.4s;
-  border-radius: 24px;
-}
-.toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  -webkit-transition: 0.4s;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked + .toggle-slider {
-  background-color: #4CAF50;
-}
-input:checked + .toggle-slider:before {
-  -webkit-transform: translateX(26px);
-          transform: translateX(26px);
-}
-
-.toggle-label {
-  font-size: 14px;
-  color: #666;
-}
-
-.notification-actions {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: end;
-      -ms-flex-pack: end;
-          justify-content: flex-end;
-  margin-top: 15px;
-}
-
-.save-notification {
-  background-color: #4CAF50;
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  -webkit-transition: background-color 0.2s;
-  transition: background-color 0.2s;
-}
-.save-notification:hover, .save-notification:focus {
-  background-color: #45a049;
-}
-.save-notification:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.notification-error {
-  color: #f44336;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-.notification-btn.has-notification {
-  position: relative;
-}
-
-.notification-btn.has-notification::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 8px;
-  height: 8px;
-  background-color: #4CAF50;
-  border-radius: 50%;
-}
-
-.notification-datetime.disabled input {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.notification-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-.notification-btn.disabled:hover {
-  background-color: transparent;
-}
-
-.profile-wrapper {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-}
-
-#user-profile {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  -o-object-fit: cover;
-     object-fit: cover;
-  border: 2px solid #fff;
-  background-color: #fff;
-}
-
-.user-name {
-  color: #fff;
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.footer {
-  background-color: gray;
-  min-height: 300px;
-}
 
 body {
   font-family: "Montserrat";
@@ -1409,4 +1150,60 @@ body {
 
 .hidden {
   display: none;
+}
+
+.profile-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    background-color: #fff;
+}
+
+.user-name {
+    color: #fff;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+}
+
+.logout-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.logout-icon {
+    width: 20px;
+    height: 20px;
+    color: #fff;
+}
+
+/* Добавляем стили для тултипа */
+[title] {
+  position: relative;
+  cursor: help;
 }
