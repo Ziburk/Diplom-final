@@ -198,6 +198,15 @@ bot.command('help', (ctx) => {
     );
 });
 
+// Команда /list
+bot.command('list', (ctx) => showTasksList(ctx));
+
+// Команда /categories
+bot.command('categories', (ctx) => showCategories(ctx));
+
+// Команда /stats
+bot.command('stats', (ctx) => showStats(ctx));
+
 // Обработка кнопок главного меню
 bot.hears('➕ Добавить задачу', (ctx) => startAddingTask(ctx));
 bot.hears('📋 Список задач', (ctx) => showTasksList(ctx));
