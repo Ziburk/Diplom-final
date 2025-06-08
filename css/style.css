@@ -286,6 +286,7 @@ table {
   font-weight: 500;
   font-style: normal;
   margin: 0 0 0 15px;
+  cursor: default;
 }
 .task .task-title-wrapper {
   display: -webkit-box;
@@ -1017,6 +1018,10 @@ table {
   margin-right: 8px;
 }
 
+.export-task-item label {
+  cursor: default;
+}
+
 .no-tasks-message {
   color: #777;
   font-style: italic;
@@ -1195,4 +1200,10 @@ body {
     width: 20px;
     height: 20px;
     color: #fff;
+}
+
+/* Добавляем стили для тултипа */
+[title] {
+  position: relative;
+  cursor: help;
 }
