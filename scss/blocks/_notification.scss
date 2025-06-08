@@ -5,20 +5,21 @@
     padding: 5px;
     margin-right: 5px;
     transition: transform 0.2s;
-}
 
-.notification-btn:hover {
-    transform: scale(1.1);
+    &:hover,
+    &:focus {
+        transform: scale(1.1);
+    }
 }
 
 .notification-btn img {
     width: 20px;
     height: 20px;
     vertical-align: middle;
-}
 
-.notification-btn.active {
-    color: #4CAF50;
+    .notification-btn.active {
+        color: #4CAF50;
+    }
 }
 
 .notification-dropdown {
@@ -30,12 +31,12 @@
     padding: 15px;
     z-index: 1000;
     min-width: 250px;
-}
 
-.notification-dropdown h4 {
-    margin: 0 0 10px 0;
-    color: #333;
-    font-size: 14px;
+    h4 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 14px;
+    }
 }
 
 .notification-form {
@@ -48,14 +49,14 @@
     display: flex;
     gap: 10px;
     align-items: center;
-}
 
-.notification-datetime input[type="date"],
-.notification-datetime input[type="time"] {
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
+    input[type="date"],
+    input[type="time"] {
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
 }
 
 /* Стили для переключателя */
@@ -71,12 +72,12 @@
     display: inline-block;
     width: 50px;
     height: 24px;
-}
 
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
 }
 
 .toggle-slider {
@@ -89,26 +90,27 @@
     background-color: #ccc;
     transition: .4s;
     border-radius: 24px;
+
+    &:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
 }
 
-.toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
 
 input:checked + .toggle-slider {
     background-color: #4CAF50;
-}
 
-input:checked + .toggle-slider:before {
-    transform: translateX(26px);
+    &:before {
+        transform: translateX(26px);
+    }
 }
 
 .toggle-label {
@@ -131,15 +133,16 @@ input:checked + .toggle-slider:before {
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.2s;
-}
 
-.save-notification:hover {
-    background-color: #45a049;
-}
+    &:hover,
+    &:focus {
+        background-color: #45a049;
+    }
 
-.save-notification:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
+    &:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
 }
 
 .notification-error {
@@ -172,8 +175,8 @@ input:checked + .toggle-slider:before {
     opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
-}
 
-.notification-btn.disabled:hover {
-    background-color: transparent;
+    &:hover {
+        background-color: transparent;
+    }
 } 
