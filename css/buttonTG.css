@@ -1,0 +1,25 @@
+.telegram-bot-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #0088cc;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    margin: 0 15px;
+}
+
+.telegram-bot-button:hover {
+    background-color: #006699;
+}
+
+.telegram-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
+}

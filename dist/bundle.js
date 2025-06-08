@@ -58854,12 +58854,12 @@ var init = /*#__PURE__*/function () {
 
 // Функция обновления информации
 function updateUI() {
-  updateCategorySelectors(); //Обновление всех выпадающих списков категорий
+  var filtersState = saveFiltersState(); // Сохраняем состояние фильтров
+  updateCategorySelectors(); // Обновление всех выпадающих списков категорий
+  restoreFiltersState(filtersState); // Восстанавливаем состояние фильтров
   renderTasks(); // Отрисовка всех задач
   updateStats(); // Обновление статистики на вкладке "Статистика"
-  saveTasks();
 }
-;
 
 // Функция загрузки категорий с сервера
 function loadCategories() {
@@ -59267,7 +59267,7 @@ function createTaskElement(task, index, isCompleted) {
 
 // Функция для обрезки заголовка задачи
 function truncateTitle(title) {
-  var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 35;
+  var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 30;
   if (!title) return 'Без названия';
   return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
@@ -59717,6 +59717,10 @@ function _deleteCategory() {
         case 1:
           delete categories[categoryId];
 
+          // Загружаем актуальные данные с сервера
+          _context12.n = 2;
+          return loadTasks();
+        case 2:
           // Обновляем UI
           updateUI();
 
@@ -59728,16 +59732,16 @@ function _deleteCategory() {
               renderCategoriesList(container);
             }
           }
-          _context12.n = 3;
+          _context12.n = 4;
           break;
-        case 2:
-          _context12.p = 2;
+        case 3:
+          _context12.p = 3;
           _t10 = _context12.v;
           console.error('Ошибка при удалении категории:', _t10);
-        case 3:
+        case 4:
           return _context12.a(2);
       }
-    }, _callee12, null, [[0, 2]]);
+    }, _callee12, null, [[0, 3]]);
   }));
   return _deleteCategory.apply(this, arguments);
 }
@@ -59882,7 +59886,7 @@ function _changeTask() {
             newTitle = currentTitleText;
             saveChanges = /*#__PURE__*/function () {
               var _ref1 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15() {
-                var taskElement, taskId, isCompleted, _t12;
+                var taskElement, taskId, _t12;
                 return _regenerator().w(function (_context15) {
                   while (1) switch (_context15.n) {
                     case 0:
@@ -59896,7 +59900,6 @@ function _changeTask() {
                       _context15.p = 2;
                       taskElement = event.target.closest('.task');
                       taskId = taskElement.dataset.taskId;
-                      isCompleted = taskElement.classList.contains('completed-task');
                       _context15.n = 3;
                       return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateTask(taskId, {
                         title: newTitle,
@@ -59907,6 +59910,7 @@ function _changeTask() {
                       return loadTasks();
                     case 4:
                       // Перезагружаем задачи
+                      updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
                       toggleTaskDraggable(currentTaskWr, true);
                       _context15.n = 6;
                       break;
@@ -60228,13 +60232,10 @@ function _changeTaskDate() {
                     taskId = taskElement.dataset.taskId;
                     newDate = null;
                     if (dateInput.value) {
-                      // Создаем дату в локальном часовом поясе
                       localDate = new Date(dateInput.value);
-                      localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
-                      newDate = localDate.toISOString(); // Преобразуем в ISO формат
+                      localDate.setHours(12, 0, 0, 0);
+                      newDate = localDate.toISOString();
                     }
-
-                    // Получаем текущую задачу для проверки настроек уведомлений
                     _context18.n = 1;
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].findTask(taskId);
                   case 1:
@@ -60244,7 +60245,7 @@ function _changeTaskDate() {
                       break;
                     }
                     notificationDate = new Date(task.notification_time);
-                    oldTaskDate = new Date(task.due_date); // Проверяем, было ли установлено стандартное время уведомления (8:00)
+                    oldTaskDate = new Date(task.due_date);
                     if (!(notificationDate.getHours() === 8 && notificationDate.getMinutes() === 0 && notificationDate.getDate() === oldTaskDate.getDate() && notificationDate.getMonth() === oldTaskDate.getMonth() && notificationDate.getFullYear() === oldTaskDate.getFullYear())) {
                       _context18.n = 4;
                       break;
@@ -60278,9 +60279,9 @@ function _changeTaskDate() {
                     _context18.n = 6;
                     return loadTasks();
                   case 6:
-                    // Перезагружаем задачи для обновления UI
+                    // Перезагружаем задачи
+                    updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
 
-                    // Включаем перетаскивание обратно после сохранения
                     toggleTaskDraggable(taskElement, true);
                     document.removeEventListener('click', handleOutsideClick);
                     _context18.n = 8;
@@ -60420,6 +60421,8 @@ function _completeTask() {
           _context21.n = 6;
           return loadTasks();
         case 6:
+          // Перезагружаем задачи
+          updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
           _context21.n = 8;
           break;
         case 7:
@@ -61435,6 +61438,25 @@ function toggleTaskDraggable(taskElement, isDraggable) {
   if (taskElement) {
     taskElement.draggable = isDraggable;
   }
+}
+
+// Функция для сохранения текущего состояния фильтров
+function saveFiltersState() {
+  return {
+    category: document.getElementById('category-filter').value,
+    date: document.getElementById('date-filter').value,
+    dateSort: document.getElementById('date-sort').value,
+    status: document.querySelector('input[name="status"]:checked').value
+  };
+}
+
+// Функция для восстановления состояния фильтров
+function restoreFiltersState(state) {
+  if (!state) return;
+  document.getElementById('category-filter').value = state.category;
+  document.getElementById('date-filter').value = state.date;
+  document.getElementById('date-sort').value = state.dateSort;
+  document.querySelector("input[name=\"status\"][value=\"".concat(state.status, "\"]")).checked = true;
 }
 window.onload = init;
 })();

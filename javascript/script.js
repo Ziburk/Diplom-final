@@ -229,11 +229,12 @@ const init = async () => {
 
 // Функция обновления информации
 function updateUI() {
-    updateCategorySelectors();  //Обновление всех выпадающих списков категорий
+    const filtersState = saveFiltersState();  // Сохраняем состояние фильтров
+    updateCategorySelectors();  // Обновление всех выпадающих списков категорий
+    restoreFiltersState(filtersState);  // Восстанавливаем состояние фильтров
     renderTasks();  // Отрисовка всех задач
     updateStats();  // Обновление статистики на вкладке "Статистика"
-    saveTasks();
-};
+}
 
 // Функция загрузки категорий с сервера
 async function loadCategories() {
@@ -609,7 +610,7 @@ function createTaskElement(task, index, isCompleted) {
 }
 
 // Функция для обрезки заголовка задачи
-function truncateTitle(title, maxLength = 35) {
+function truncateTitle(title, maxLength = 30) {
     if (!title) return 'Без названия';
     return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
@@ -1007,6 +1008,9 @@ async function deleteCategory(categoryId) {
         await todoAPI.deleteCategory(categoryId);
         delete categories[categoryId];
         
+        // Загружаем актуальные данные с сервера
+        await loadTasks();
+        
         // Обновляем UI
         updateUI();
         
@@ -1155,7 +1159,6 @@ async function changeTask(event) {
             try {
                 const taskElement = event.target.closest('.task');
                 const taskId = taskElement.dataset.taskId;
-                const isCompleted = taskElement.classList.contains('completed-task');
 
                 await todoAPI.updateTask(taskId, {
                     title: newTitle,
@@ -1163,6 +1166,7 @@ async function changeTask(event) {
                 });
 
                 await loadTasks(); // Перезагружаем задачи
+                updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
                 toggleTaskDraggable(currentTaskWr, true);
             } catch (error) {
                 console.error('Ошибка при обновлении задачи:', error);
@@ -1440,28 +1444,23 @@ async function changeTaskDate(event) {
             let newDate = null;
 
             if (dateInput.value) {
-                // Создаем дату в локальном часовом поясе
                 const localDate = new Date(dateInput.value);
-                localDate.setHours(12, 0, 0, 0); // Устанавливаем время на полдень
-                newDate = localDate.toISOString(); // Преобразуем в ISO формат
+                localDate.setHours(12, 0, 0, 0);
+                newDate = localDate.toISOString();
             }
 
-            // Получаем текущую задачу для проверки настроек уведомлений
             const task = await todoAPI.findTask(taskId);
 
-            // Если у задачи включены уведомления и не установлено конкретное время (стандартное уведомление)
             if (task.notifications_enabled && task.notification_time) {
                 const notificationDate = new Date(task.notification_time);
                 const oldTaskDate = new Date(task.due_date);
                 
-                // Проверяем, было ли установлено стандартное время уведомления (8:00)
                 if (notificationDate.getHours() === 8 && 
                     notificationDate.getMinutes() === 0 &&
                     notificationDate.getDate() === oldTaskDate.getDate() &&
                     notificationDate.getMonth() === oldTaskDate.getMonth() &&
                     notificationDate.getFullYear() === oldTaskDate.getFullYear()) {
                     
-                    // Если это стандартное уведомление, обновляем его на новую дату
                     if (newDate) {
                         const newNotificationDate = new Date(newDate);
                         newNotificationDate.setHours(8, 0, 0, 0);
@@ -1470,7 +1469,6 @@ async function changeTaskDate(event) {
                             notification_time: newNotificationDate.toISOString()
                         });
                     } else {
-                        // Если дата задачи удалена, отключаем уведомления
                         await todoAPI.updateTaskNotifications(taskId, {
                             notifications_enabled: false,
                             notification_time: null
@@ -1479,13 +1477,11 @@ async function changeTaskDate(event) {
                 }
             }
 
-            // Обновляем дату задачи
             await todoAPI.updateTask(taskId, { due_date: newDate });
-            await loadTasks(); // Перезагружаем задачи для обновления UI
+            await loadTasks(); // Перезагружаем задачи
+            updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
 
-            // Включаем перетаскивание обратно после сохранения
             toggleTaskDraggable(taskElement, true);
-
             document.removeEventListener('click', handleOutsideClick);
         } catch (error) {
             console.error('Ошибка при обновлении даты:', error);
@@ -1576,6 +1572,7 @@ async function completeTask(event) {
         }
 
         await loadTasks(); // Перезагружаем задачи
+        updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
     } catch (error) {
         console.error('Ошибка при изменении статуса задачи:', error);
     }
@@ -2566,6 +2563,26 @@ function toggleTaskDraggable(taskElement, isDraggable) {
     if (taskElement) {
         taskElement.draggable = isDraggable;
     }
+}
+
+// Функция для сохранения текущего состояния фильтров
+function saveFiltersState() {
+    return {
+        category: document.getElementById('category-filter').value,
+        date: document.getElementById('date-filter').value,
+        dateSort: document.getElementById('date-sort').value,
+        status: document.querySelector('input[name="status"]:checked').value
+    };
+}
+
+// Функция для восстановления состояния фильтров
+function restoreFiltersState(state) {
+    if (!state) return;
+
+    document.getElementById('category-filter').value = state.category;
+    document.getElementById('date-filter').value = state.date;
+    document.getElementById('date-sort').value = state.dateSort;
+    document.querySelector(`input[name="status"][value="${state.status}"]`).checked = true;
 }
 
 window.onload = init;

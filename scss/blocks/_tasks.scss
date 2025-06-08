@@ -61,6 +61,7 @@
     .task-title {
         @include font(24px, 1.5, 500);
         margin: 0 0 0 15px;
+        text-wrap: nowrap;
 
         &-wrapper {
             display: flex;
