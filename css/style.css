@@ -1388,11 +1388,6 @@ input:checked + .toggle-slider:before {
   font-size: 16px;
 }
 
-.footer {
-  background-color: gray;
-  min-height: 300px;
-}
-
 body {
   font-family: "Montserrat";
 }
