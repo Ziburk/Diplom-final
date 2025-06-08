@@ -930,9 +930,8 @@ function renderCategoriesList(container) {
         });
 
         // Обработчик события для удаления категории
-        categoryElement.querySelector('.delete-category').addEventListener('click', () => {
-            deleteCategory(category.id);
-            renderCategoriesList(container);
+        categoryElement.querySelector('.delete-category').addEventListener('click', async () => {
+            await deleteCategory(category.id);
         });
     });
 }
@@ -1010,6 +1009,15 @@ async function deleteCategory(categoryId) {
         
         // Обновляем UI
         updateUI();
+        
+        // Обновляем список категорий в модальном окне
+        const modal = document.querySelector('.category-manager-modal');
+        if (modal) {
+            const container = modal.querySelector('.categories-list');
+            if (container) {
+                renderCategoriesList(container);
+            }
+        }
     } catch (error) {
         console.error('Ошибка при удалении категории:', error);
     }
