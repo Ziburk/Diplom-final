@@ -59250,7 +59250,7 @@ function createTaskElement(task, index, isCompleted) {
   tempEditor.destroy();
   var hasNotification = task.notification_time !== null && task.notification_time !== undefined;
   var notificationClass = hasNotification ? 'has-notification' : '';
-  taskElement.innerHTML = "\n    <div class=\"task-wrapper\">\n        <div class=\"task-title-wrapper\">\n            <input class=\"task-comp hidden\" type=\"checkbox\" name=\"task-comp\" ".concat(isCompleted ? 'checked' : '', ">\n            <label class=\"check-label\" for=\"task-comp\"></label>\n            <span class=\"task-category\" style=\"background-color: ").concat(category.color, "\">\n                ").concat(category.name, "\n            </span>\n            <h3 class=\"task-title\">").concat(task.title || 'Без названия', "</h3>\n            <button class=\"task-change\">\n                <img class=\"task-change-logo\" src=\"img/edit-ico.svg\" alt=\"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C\">\n            </button>\n        </div>\n        <div class=\"task-date-wrapper\">\n            <button class=\"notification-btn ").concat(notificationClass, " ").concat(isCompleted ? 'disabled' : '', "\" title=\"\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n                <img src=\"img/bell.svg\" alt=\"\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n            </button>\n            <span class=\"task-due-date\">").concat(formatDate(task.due_date), "</span>\n            <button class=\"task-change-date\">\n                <img class=\"task-change-date-logo\" src=\"img/edit-ico.svg\" alt=\"\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0434\u0430\u0442\u0443\">\n            </button>\n        </div>\n        <div class=\"button-wrapper\">\n            <button class=\"task-open-description\">\n                <img class=\"task-description-ico\" alt=\"\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435\" src=\"img/arrow-desc.svg\">\n            </button>\n            <button class=\"task-delete\">\n                <img class=\"task-delete-ico\" src=\"img/delete-ico.svg\" alt=\"\u0423\u0434\u0430\u043B\u0438\u0442\u044C\">\n            </button>\n        </div>\n    </div>\n    <div class=\"task-description hidden\">\n        <h4 class=\"task-description-title\">\u041E\u043F\u0438\u0441\u0430\u043D\u0438\u0435</h4>\n        <div class=\"description-content\">\n            <div class=\"task-description-text\">").concat(htmlDescription, "</div>\n            <div class=\"task-description-editor hidden\" id=\"editor-").concat(index, "\"></div>\n        </div>\n        <div class=\"editor-buttons hidden\">\n            <button class=\"save-description-btn\">\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>\n            <button class=\"cancel-description-btn\">\u041E\u0442\u043C\u0435\u043D\u0430</button>\n        </div>\n    </div>");
+  taskElement.innerHTML = "\n    <div class=\"task-wrapper\">\n        <div class=\"task-title-wrapper\">\n            <input class=\"task-comp hidden\" type=\"checkbox\" name=\"task-comp\" ".concat(isCompleted ? 'checked' : '', ">\n            <label class=\"check-label\" for=\"task-comp\"></label>\n            <span class=\"task-category\" style=\"background-color: ").concat(category.color, "\">\n                ").concat(category.name, "\n            </span>\n            <h3 class=\"task-title\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), "</h3>\n            <button class=\"task-change\">\n                <img class=\"task-change-logo\" src=\"img/edit-ico.svg\" alt=\"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C\">\n            </button>\n        </div>\n        <div class=\"task-date-wrapper\">\n            <button class=\"notification-btn ").concat(notificationClass, " ").concat(isCompleted ? 'disabled' : '', "\" title=\"\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n                <img src=\"img/bell.svg\" alt=\"\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n            </button>\n            <span class=\"task-due-date\">").concat(formatDate(task.due_date), "</span>\n            <button class=\"task-change-date\">\n                <img class=\"task-change-date-logo\" src=\"img/edit-ico.svg\" alt=\"\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0434\u0430\u0442\u0443\">\n            </button>\n        </div>\n        <div class=\"button-wrapper\">\n            <button class=\"task-open-description\">\n                <img class=\"task-description-ico\" alt=\"\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435\" src=\"img/arrow-desc.svg\">\n            </button>\n            <button class=\"task-delete\">\n                <img class=\"task-delete-ico\" src=\"img/delete-ico.svg\" alt=\"\u0423\u0434\u0430\u043B\u0438\u0442\u044C\">\n            </button>\n        </div>\n    </div>\n    <div class=\"task-description hidden\">\n        <h4 class=\"task-description-title\">\u041E\u043F\u0438\u0441\u0430\u043D\u0438\u0435</h4>\n        <div class=\"description-content\">\n            <div class=\"task-description-text\">").concat(htmlDescription, "</div>\n            <div class=\"task-description-editor hidden\" id=\"editor-").concat(index, "\"></div>\n        </div>\n        <div class=\"editor-buttons hidden\">\n            <button class=\"save-description-btn\">\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>\n            <button class=\"cancel-description-btn\">\u041E\u0442\u043C\u0435\u043D\u0430</button>\n        </div>\n    </div>");
   taskElement.setAttribute('style', "border-color: ".concat(category.color));
 
   // Добавляем обработчик для кнопки уведомлений
@@ -59263,6 +59263,13 @@ function createTaskElement(task, index, isCompleted) {
     }
   });
   return taskElement;
+}
+
+// Функция для обрезки заголовка задачи
+function truncateTitle(title) {
+  var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 35;
+  if (!title) return 'Без названия';
+  return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
 
 // Функция для отображения выпадающего меню уведомлений
@@ -59829,7 +59836,7 @@ function _changeTask() {
           isInput = currentTask.querySelector('.task-title-input');
           if (!isInput) {
             toggleTaskDraggable(currentTaskWr, false);
-            currentTitleText = currentTaskTitle.innerText;
+            currentTitleText = currentTaskTitle.getAttribute('title') || currentTaskTitle.innerText;
             currentCategoryId = currentTaskWr.dataset.category || getCategoryIdByName(currentTaskCategory.textContent.trim()) || defaultCategoryId;
             currentTaskTitle.remove();
             currentTaskCategory.remove();
@@ -59849,8 +59856,11 @@ function _changeTask() {
             taskTitleInput.className = 'task-title-input';
             currentTask.insertBefore(categorySelect, redactButton);
             currentTask.insertBefore(taskTitleInput, categorySelect);
+
+            // Устанавливаем фокус и перемещаем курсор в конец текста
             taskTitleInput.focus();
-            taskTitleInput.setSelectionRange(taskTitleInput.value.length, taskTitleInput.value.length);
+            taskTitleInput.selectionStart = taskTitleInput.value.length;
+            taskTitleInput.selectionEnd = taskTitleInput.value.length;
             isSaved = false;
             newCategory = currentCategoryId;
             newTitle = currentTitleText;
@@ -60786,7 +60796,7 @@ function renderTasksForExportSelection() {
   tasks.active.forEach(function (task, index) {
     var taskElement = document.createElement('div');
     taskElement.className = 'export-task-item';
-    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-active\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"active\">\n            <label for=\"task-").concat(index, "-active\">").concat(task.title || 'Без названия', " (\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F)</label>\n        ");
+    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-active\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"active\">\n            <label for=\"task-").concat(index, "-active\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), " (\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F)</label>\n        ");
     container.appendChild(taskElement);
   });
 
@@ -60794,7 +60804,7 @@ function renderTasksForExportSelection() {
   tasks.completed.forEach(function (task, index) {
     var taskElement = document.createElement('div');
     taskElement.className = 'export-task-item';
-    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-completed\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"completed\">\n            <label for=\"task-").concat(index, "-completed\">").concat(task.title || 'Без названия', " (\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u0430\u044F)</label>\n        ");
+    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-completed\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"completed\">\n            <label for=\"task-").concat(index, "-completed\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), " (\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u0430\u044F)</label>\n        ");
     container.appendChild(taskElement);
   });
 
@@ -61029,6 +61039,7 @@ function addTaskToPdf(docDefinition, task, isCompleted) {
   var category = categories[task.category] || categories[defaultCategoryId];
   docDefinition.content.push({
     text: task.title || 'Без названия',
+    // В PDF показываем полный заголовок
     style: 'taskTitle'
   });
   docDefinition.content.push({

@@ -559,7 +559,7 @@ function createTaskElement(task, index, isCompleted) {
             <span class="task-category" style="background-color: ${category.color}">
                 ${category.name}
             </span>
-            <h3 class="task-title">${task.title || 'Без названия'}</h3>
+            <h3 class="task-title" title="${task.title || 'Без названия'}">${truncateTitle(task.title)}</h3>
             <button class="task-change">
                 <img class="task-change-logo" src="img/edit-ico.svg" alt="Редактировать">
             </button>
@@ -606,6 +606,12 @@ function createTaskElement(task, index, isCompleted) {
     });
 
     return taskElement;
+}
+
+// Функция для обрезки заголовка задачи
+function truncateTitle(title, maxLength = 35) {
+    if (!title) return 'Без названия';
+    return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
 
 // Функция для отображения выпадающего меню уведомлений
@@ -1097,7 +1103,7 @@ async function changeTask(event) {
     if (!isInput) {
         toggleTaskDraggable(currentTaskWr, false);
 
-        const currentTitleText = currentTaskTitle.innerText;
+        const currentTitleText = currentTaskTitle.getAttribute('title') || currentTaskTitle.innerText;
         const currentCategoryId = currentTaskWr.dataset.category ||
             getCategoryIdByName(currentTaskCategory.textContent.trim()) ||
             defaultCategoryId;
@@ -1125,8 +1131,10 @@ async function changeTask(event) {
         currentTask.insertBefore(categorySelect, redactButton);
         currentTask.insertBefore(taskTitleInput, categorySelect);
 
+        // Устанавливаем фокус и перемещаем курсор в конец текста
         taskTitleInput.focus();
-        taskTitleInput.setSelectionRange(taskTitleInput.value.length, taskTitleInput.value.length);
+        taskTitleInput.selectionStart = taskTitleInput.value.length;
+        taskTitleInput.selectionEnd = taskTitleInput.value.length;
 
         let isSaved = false;
         let newCategory = currentCategoryId;
@@ -1958,7 +1966,7 @@ function renderTasksForExportSelection() {
         taskElement.className = 'export-task-item';
         taskElement.innerHTML = `
             <input type="checkbox" id="task-${index}-active" class="export-task-checkbox" data-index="${index}" data-type="active">
-            <label for="task-${index}-active">${task.title || 'Без названия'} (Активная)</label>
+            <label for="task-${index}-active" title="${task.title || 'Без названия'}">${truncateTitle(task.title)} (Активная)</label>
         `;
         container.appendChild(taskElement);
     });
@@ -1969,7 +1977,7 @@ function renderTasksForExportSelection() {
         taskElement.className = 'export-task-item';
         taskElement.innerHTML = `
             <input type="checkbox" id="task-${index}-completed" class="export-task-checkbox" data-index="${index}" data-type="completed">
-            <label for="task-${index}-completed">${task.title || 'Без названия'} (Выполненная)</label>
+            <label for="task-${index}-completed" title="${task.title || 'Без названия'}">${truncateTitle(task.title)} (Выполненная)</label>
         `;
         container.appendChild(taskElement);
     });
@@ -2182,7 +2190,7 @@ function addTaskToPdf(docDefinition, task, isCompleted) {
     const category = categories[task.category] || categories[defaultCategoryId];
 
     docDefinition.content.push({
-        text: task.title || 'Без названия',
+        text: task.title || 'Без названия',  // В PDF показываем полный заголовок
         style: 'taskTitle'
     });
 

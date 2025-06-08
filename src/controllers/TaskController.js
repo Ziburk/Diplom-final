@@ -84,7 +84,7 @@ class TaskController {
      * @param {Object} res - Express response object
      */
     static async updateTask(req, res) {
-        const { id } = req.params;
+        const taskId = parseInt(req.params.taskId);
         const { title, description, category_id, due_date, notification_time, notifications_enabled, status } = req.body;
         const userId = req.user.user_id;
 
@@ -92,7 +92,7 @@ class TaskController {
             // Получаем текущие данные задачи
             const currentTask = await pool.query(
                 'SELECT due_date, notification_time FROM tasks WHERE task_id = $1 AND user_id = $2',
-                [id, userId]
+                [taskId, userId]
             );
 
             if (currentTask.rows.length === 0) {
@@ -115,12 +115,12 @@ class TaskController {
                      status = COALESCE($7, status)
                  WHERE task_id = $8 AND user_id = $9
                  RETURNING *`,
-                [title, description, category_id, due_date, notification_time, notifications_enabled, status, id, userId]
+                [title, description, category_id, due_date, notification_time, notifications_enabled, status, taskId, userId]
             );
 
             // Если изменилась дата или время уведомления, очищаем историю уведомлений
             if (dateChanged || notificationTimeChanged) {
-                await notificationService.clearNotificationHistory(id, userId);
+                await notificationService.clearNotificationHistory(taskId, userId);
             }
 
             res.json(result.rows[0]);

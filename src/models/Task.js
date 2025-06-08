@@ -155,7 +155,8 @@ class Task {
         try {
             const allowedFields = [
                 'title', 'description', 'category_id', 'due_date',
-                'status', 'completed_at', 'order'
+                'status', 'completed_at', 'order', 'notification_time',
+                'notifications_enabled'
             ];
             
             const updates = [];
