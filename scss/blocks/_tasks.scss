@@ -40,6 +40,7 @@
 .task-list {
     display: grid;
     grid-row-gap: 15px;
+    margin: 0 0 50px 0;
 }
 
 .task {
@@ -62,6 +63,7 @@
         @include font(24px, 1.5, 500);
         margin: 0 0 0 15px;
         text-wrap: nowrap;
+        cursor: default;
 
         &-wrapper {
             display: flex;
@@ -284,3 +286,8 @@
 .task-description-text a:hover {
     text-decoration: underline;
 }
+
+[title] {
+    position: relative;
+    cursor: help;
+  }
