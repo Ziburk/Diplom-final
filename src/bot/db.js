@@ -198,6 +198,18 @@ async function updateTaskNotifications(taskId, { notifications_enabled, notifica
     return result.rows[0];
 }
 
+// Функция обновления описания задачи
+async function updateTaskDescription(taskId, description) {
+    const query = `
+        UPDATE tasks 
+        SET description = $2
+        WHERE task_id = $1
+        RETURNING *
+    `;
+    const result = await pool.query(query, [taskId, description]);
+    return result.rows[0];
+}
+
 module.exports = {
     getOrCreateUser,
     getUserCategories,
@@ -213,5 +225,6 @@ module.exports = {
     getTaskById,
     updateTaskTitle,
     updateTaskOrder,
-    updateTaskNotifications
+    updateTaskNotifications,
+    updateTaskDescription
 }; 
