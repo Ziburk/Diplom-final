@@ -64,12 +64,16 @@
     .task-title {
         @include font(17px, 1.5, 500);
         margin: 0 0 0 15px;
-        text-wrap: nowrap;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: calc(100% - 150px);
         cursor: default;
 
         &-wrapper {
             display: flex;
             width: 100%;
+            align-items: center;
         }
 
         &-input {
@@ -87,6 +91,8 @@
         background-repeat: no-repeat;
         background-size: contain;
         background-position: center;
+        width: 25px;
+        height: 25px;
     }
 
     .check-label {
@@ -197,6 +203,7 @@
 .completed-tasks-title,
 .current-tasks-title {
     margin: 20px 0;
+    font-size: 20px;
 }
 
 .task-description-text h1,

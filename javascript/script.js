@@ -557,7 +557,7 @@ function createTaskElement(task, index, isCompleted) {
         <div class="task-title-wrapper">
             <input class="task-comp hidden" type="checkbox" name="task-comp" ${isCompleted ? 'checked' : ''}>
             <label class="check-label" for="task-comp"></label>
-            <h3 class="task-title" title="${task.title || 'Без названия'}">${truncateTitle(task.title)}</h3>
+            <h3 class="task-title" title="${task.title || 'Без названия'}">${task.title || 'Без названия'}</h3>
             <span class="task-category" style="background-color: ${category.color}">
                 ${category.name}
             </span>
@@ -607,12 +607,6 @@ function createTaskElement(task, index, isCompleted) {
     });
 
     return taskElement;
-}
-
-// Функция для обрезки заголовка задачи
-function truncateTitle(title, maxLength = 30) {
-    if (!title) return 'Без названия';
-    return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
 
 // Функция для отображения выпадающего меню уведомлений
@@ -854,24 +848,32 @@ function renderCategoriesList(container) {
         categoryElement.className = 'category-item';
         categoryElement.innerHTML = `
             <input type="color" class="category-color-picker" value="${category.color}">
-            <input type="text" class="category-name" value="${category.name}">
+            <input type="text" class="category-name" value="${category.name}" maxlength="15">
             <button class="delete-category" data-id="${category.id}">Удалить</button>
         `;
 
         container.appendChild(categoryElement);
 
         // Обработчик события для изменения имени категории
-        categoryElement.querySelector('.category-name').addEventListener('change', async (e) => {
+        const nameInput = categoryElement.querySelector('.category-name');
+        nameInput.addEventListener('change', async (e) => {
             try {
+                const newName = e.target.value.trim();
+                if (newName.length === 0) {
+                    e.target.value = category.name;
+                    return;
+                }
+                
                 await todoAPI.updateCategory(category.id, { 
-                    name: e.target.value,
+                    name: newName,
                     color: category.color 
                 });
-                categories[category.id].name = e.target.value;
+                categories[category.id].name = newName;
                 updateCategorySelectors();
                 renderTasks();
             } catch (error) {
                 console.error('Ошибка при обновлении имени категории:', error);
+                e.target.value = category.name; // Возвращаем старое значение в случае ошибки
             }
         });
 
@@ -973,7 +975,7 @@ async function addNewCategory() {
     ];
 
     const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-    const defaultName = `Категория-${categoryNumber}`;
+    const defaultName = `Категория-${categoryNumber}`.slice(0, 15);
 
     try {
         const newCategory = await todoAPI.createCategory(defaultName, randomColor);
@@ -1971,7 +1973,7 @@ function renderTasksForExportSelection() {
         taskElement.className = 'export-task-item';
         taskElement.innerHTML = `
             <input type="checkbox" id="task-${index}-active" class="export-task-checkbox" data-index="${index}" data-type="active">
-            <label for="task-${index}-active" title="${task.title || 'Без названия'}">${truncateTitle(task.title)} (Активная)</label>
+            <label for="task-${index}-active" title="${task.title || 'Без названия'}">${task.title || 'Без названия'} (Активная)</label>
         `;
         container.appendChild(taskElement);
     });
@@ -1982,7 +1984,7 @@ function renderTasksForExportSelection() {
         taskElement.className = 'export-task-item';
         taskElement.innerHTML = `
             <input type="checkbox" id="task-${index}-completed" class="export-task-checkbox" data-index="${index}" data-type="completed">
-            <label for="task-${index}-completed" title="${task.title || 'Без названия'}">${truncateTitle(task.title)} (Выполненная)</label>
+            <label for="task-${index}-completed" title="${task.title || 'Без названия'}">${task.title || 'Без названия'} (Выполненная)</label>
         `;
         container.appendChild(taskElement);
     });

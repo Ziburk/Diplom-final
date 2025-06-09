@@ -59250,7 +59250,7 @@ function createTaskElement(task, index, isCompleted) {
   tempEditor.destroy();
   var hasNotification = task.notification_time !== null && task.notification_time !== undefined;
   var notificationClass = hasNotification ? 'has-notification' : '';
-  taskElement.innerHTML = "\n    <div class=\"task-wrapper\">\n        <div class=\"task-title-wrapper\">\n            <input class=\"task-comp hidden\" type=\"checkbox\" name=\"task-comp\" ".concat(isCompleted ? 'checked' : '', ">\n            <label class=\"check-label\" for=\"task-comp\"></label>\n            <h3 class=\"task-title\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), "</h3>\n            <span class=\"task-category\" style=\"background-color: ").concat(category.color, "\">\n                ").concat(category.name, "\n            </span>\n            <button class=\"task-change\">\n                <img class=\"task-change-logo\" src=\"img/edit-ico.svg\" alt=\"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C\">\n            </button>\n        </div>\n        <div class=\"task-date-wrapper\">\n            <button class=\"notification-btn ").concat(notificationClass, " ").concat(isCompleted ? 'disabled' : '', "\" title=\"\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n                <img src=\"img/bell.svg\" alt=\"\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n            </button>\n            <span class=\"task-due-date\">").concat(formatDate(task.due_date), "</span>\n            <button class=\"task-change-date\">\n                <img class=\"task-change-date-logo\" src=\"img/edit-ico.svg\" alt=\"\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0434\u0430\u0442\u0443\">\n            </button>\n        </div>\n        <div class=\"button-wrapper\">\n            <button class=\"task-open-description\">\n                <img class=\"task-description-ico\" alt=\"\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435\" src=\"img/arrow-desc.svg\">\n            </button>\n            <button class=\"task-delete\">\n                <img class=\"task-delete-ico\" src=\"img/delete-ico.svg\" alt=\"\u0423\u0434\u0430\u043B\u0438\u0442\u044C\">\n            </button>\n        </div>\n    </div>\n    <div class=\"task-description hidden\">\n        <h4 class=\"task-description-title\">\u041E\u043F\u0438\u0441\u0430\u043D\u0438\u0435</h4>\n        <div class=\"description-content\">\n            <div class=\"task-description-text\">").concat(htmlDescription, "</div>\n            <div class=\"task-description-editor hidden\" id=\"editor-").concat(index, "\"></div>\n        </div>\n        <div class=\"editor-buttons hidden\">\n            <button class=\"save-description-btn\">\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>\n            <button class=\"cancel-description-btn\">\u041E\u0442\u043C\u0435\u043D\u0430</button>\n        </div>\n    </div>");
+  taskElement.innerHTML = "\n    <div class=\"task-wrapper\">\n        <div class=\"task-title-wrapper\">\n            <input class=\"task-comp hidden\" type=\"checkbox\" name=\"task-comp\" ".concat(isCompleted ? 'checked' : '', ">\n            <label class=\"check-label\" for=\"task-comp\"></label>\n            <h3 class=\"task-title\" title=\"").concat(task.title || 'Без названия', "\">").concat(task.title || 'Без названия', "</h3>\n            <span class=\"task-category\" style=\"background-color: ").concat(category.color, "\">\n                ").concat(category.name, "\n            </span>\n            <button class=\"task-change\">\n                <img class=\"task-change-logo\" src=\"img/edit-ico.svg\" alt=\"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C\">\n            </button>\n        </div>\n        <div class=\"task-date-wrapper\">\n            <button class=\"notification-btn ").concat(notificationClass, " ").concat(isCompleted ? 'disabled' : '', "\" title=\"\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n                <img src=\"img/bell.svg\" alt=\"\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\">\n            </button>\n            <span class=\"task-due-date\">").concat(formatDate(task.due_date), "</span>\n            <button class=\"task-change-date\">\n                <img class=\"task-change-date-logo\" src=\"img/edit-ico.svg\" alt=\"\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0434\u0430\u0442\u0443\">\n            </button>\n        </div>\n        <div class=\"button-wrapper\">\n            <button class=\"task-open-description\">\n                <img class=\"task-description-ico\" alt=\"\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435\" src=\"img/arrow-desc.svg\">\n            </button>\n            <button class=\"task-delete\">\n                <img class=\"task-delete-ico\" src=\"img/delete-ico.svg\" alt=\"\u0423\u0434\u0430\u043B\u0438\u0442\u044C\">\n            </button>\n        </div>\n    </div>\n    <div class=\"task-description hidden\">\n        <h4 class=\"task-description-title\">\u041E\u043F\u0438\u0441\u0430\u043D\u0438\u0435</h4>\n        <div class=\"description-content\">\n            <div class=\"task-description-text\">").concat(htmlDescription, "</div>\n            <div class=\"task-description-editor hidden\" id=\"editor-").concat(index, "\"></div>\n        </div>\n        <div class=\"editor-buttons hidden\">\n            <button class=\"save-description-btn\">\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>\n            <button class=\"cancel-description-btn\">\u041E\u0442\u043C\u0435\u043D\u0430</button>\n        </div>\n    </div>");
   taskElement.setAttribute('style', "border-color: ".concat(category.color));
 
   // Добавляем обработчик для кнопки уведомлений
@@ -59263,13 +59263,6 @@ function createTaskElement(task, index, isCompleted) {
     }
   });
   return taskElement;
-}
-
-// Функция для обрезки заголовка задачи
-function truncateTitle(title) {
-  var maxLength = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 30;
-  if (!title) return 'Без названия';
-  return title.length > maxLength ? title.slice(0, maxLength) + '...' : title;
 }
 
 // Функция для отображения выпадающего меню уведомлений
@@ -59484,36 +59477,46 @@ function renderCategoriesList(container) {
     // Создаем элементы списка категорий
     var categoryElement = document.createElement('li');
     categoryElement.className = 'category-item';
-    categoryElement.innerHTML = "\n            <input type=\"color\" class=\"category-color-picker\" value=\"".concat(category.color, "\">\n            <input type=\"text\" class=\"category-name\" value=\"").concat(category.name, "\">\n            <button class=\"delete-category\" data-id=\"").concat(category.id, "\">\u0423\u0434\u0430\u043B\u0438\u0442\u044C</button>\n        ");
+    categoryElement.innerHTML = "\n            <input type=\"color\" class=\"category-color-picker\" value=\"".concat(category.color, "\">\n            <input type=\"text\" class=\"category-name\" value=\"").concat(category.name, "\" maxlength=\"15\">\n            <button class=\"delete-category\" data-id=\"").concat(category.id, "\">\u0423\u0434\u0430\u043B\u0438\u0442\u044C</button>\n        ");
     container.appendChild(categoryElement);
 
     // Обработчик события для изменения имени категории
-    categoryElement.querySelector('.category-name').addEventListener('change', /*#__PURE__*/function () {
+    var nameInput = categoryElement.querySelector('.category-name');
+    nameInput.addEventListener('change', /*#__PURE__*/function () {
       var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(e) {
-        var _t4;
+        var newName, _t4;
         return _regenerator().w(function (_context5) {
           while (1) switch (_context5.n) {
             case 0:
               _context5.p = 0;
-              _context5.n = 1;
+              newName = e.target.value.trim();
+              if (!(newName.length === 0)) {
+                _context5.n = 1;
+                break;
+              }
+              e.target.value = category.name;
+              return _context5.a(2);
+            case 1:
+              _context5.n = 2;
               return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].updateCategory(category.id, {
-                name: e.target.value,
+                name: newName,
                 color: category.color
               });
-            case 1:
-              categories[category.id].name = e.target.value;
+            case 2:
+              categories[category.id].name = newName;
               updateCategorySelectors();
               renderTasks();
-              _context5.n = 3;
+              _context5.n = 4;
               break;
-            case 2:
-              _context5.p = 2;
+            case 3:
+              _context5.p = 3;
               _t4 = _context5.v;
               console.error('Ошибка при обновлении имени категории:', _t4);
-            case 3:
+              e.target.value = category.name; // Возвращаем старое значение в случае ошибки
+            case 4:
               return _context5.a(2);
           }
-        }, _callee5, null, [[0, 2]]);
+        }, _callee5, null, [[0, 3]]);
       }));
       return function (_x4) {
         return _ref5.apply(this, arguments);
@@ -59666,7 +59669,7 @@ function _addNewCategory() {
           categoryNumber = Object.keys(categories).length;
           colorPalette = ['#FF5252', '#FFD740', '#69F0AE', '#448AFF', '#B388FF', '#FF80AB', '#7C4DFF', '#64FFDA', '#FF8A80', '#EA80FC', '#8C9EFF', '#80D8FF', '#A7FFEB', '#CCFF90', '#FFFF8D'];
           randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-          defaultName = "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u044F-".concat(categoryNumber);
+          defaultName = "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u044F-".concat(categoryNumber).slice(0, 15);
           _context11.p = 1;
           _context11.n = 2;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].createCategory(defaultName, randomColor);
@@ -60815,7 +60818,7 @@ function renderTasksForExportSelection() {
   tasks.active.forEach(function (task, index) {
     var taskElement = document.createElement('div');
     taskElement.className = 'export-task-item';
-    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-active\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"active\">\n            <label for=\"task-").concat(index, "-active\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), " (\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F)</label>\n        ");
+    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-active\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"active\">\n            <label for=\"task-").concat(index, "-active\" title=\"").concat(task.title || 'Без названия', "\">").concat(task.title || 'Без названия', " (\u0410\u043A\u0442\u0438\u0432\u043D\u0430\u044F)</label>\n        ");
     container.appendChild(taskElement);
   });
 
@@ -60823,7 +60826,7 @@ function renderTasksForExportSelection() {
   tasks.completed.forEach(function (task, index) {
     var taskElement = document.createElement('div');
     taskElement.className = 'export-task-item';
-    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-completed\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"completed\">\n            <label for=\"task-").concat(index, "-completed\" title=\"").concat(task.title || 'Без названия', "\">").concat(truncateTitle(task.title), " (\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u0430\u044F)</label>\n        ");
+    taskElement.innerHTML = "\n            <input type=\"checkbox\" id=\"task-".concat(index, "-completed\" class=\"export-task-checkbox\" data-index=\"").concat(index, "\" data-type=\"completed\">\n            <label for=\"task-").concat(index, "-completed\" title=\"").concat(task.title || 'Без названия', "\">").concat(task.title || 'Без названия', " (\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u0430\u044F)</label>\n        ");
     container.appendChild(taskElement);
   });
 
