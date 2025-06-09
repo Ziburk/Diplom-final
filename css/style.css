@@ -253,16 +253,17 @@ table {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+  padding: 15px 0;
 }
 .new-task-ico {
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   margin: 0 10px 0 13px;
 }
 .new-task-title {
   width: 80%;
   font-weight: 500;
-  font-size: 24px;
+  font-size: 17px;
   line-height: 1.5;
   color: black;
   border: none;
@@ -294,13 +295,13 @@ table {
   -webkit-box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
           box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
   border-radius: 24px 24px 24px 24px;
-  min-height: 89px;
+  min-height: 60px;
   background-color: #FFF;
   border: 5px solid;
   position: relative;
 }
 .task-wrapper {
-  margin: 26px 0;
+  margin: 15px 0;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -310,14 +311,20 @@ table {
   -webkit-box-pack: justify;
       -ms-flex-pack: justify;
           justify-content: space-between;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
 }
 .task .task-title {
-  font-size: 24px;
+  font-size: 17px;
   line-height: 1.5;
   font-weight: 500;
   font-style: normal;
   margin: 0 0 0 15px;
-  text-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 150px);
   cursor: default;
 }
 .task .task-title-wrapper {
@@ -325,6 +332,9 @@ table {
   display: -ms-flexbox;
   display: flex;
   width: 100%;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
 }
 .task .task-title-input {
   font-size: 24px;
@@ -338,10 +348,12 @@ table {
   font-family: "Montserrat";
 }
 .task .task-comp:checked + .check-label {
-  background-image: url(https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Light_green_check.svg/600px-Light_green_check.svg.png);
+  background-image: url("../img/checkbox-checked.svg");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
+  width: 25px;
+  height: 25px;
 }
 .task .check-label {
   margin: 0 0 0 20px;
@@ -351,11 +363,11 @@ table {
 .task .check-label::before {
   content: "";
   position: absolute;
-  background-image: url("../img/task-ico.png");
+  background-image: url("../img/checkbox-empty.svg");
   background-size: cover;
   background-position: 0;
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   top: 50%;
   left: 50%;
   -webkit-transform: translate(-50%, -50%);
@@ -365,14 +377,20 @@ table {
   cursor: pointer;
 }
 .task .task-category {
-  display: inline-block;
-  border-radius: 10px 0 0 0;
+  border-radius: 10px;
   padding: 5px;
-  font-size: 17px;
+  font-size: 13px;
   color: white;
-  position: absolute;
-  top: 0;
-  left: 0px;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  margin: 0 0 0 10px;
 }
 .task .task-change {
   margin: 0 10px;
@@ -382,6 +400,8 @@ table {
 .task .task-change:hover, .task .task-change:focus {
   cursor: pointer;
   opacity: 0.7;
+  -webkit-transform: scale(1.1);
+          transform: scale(1.1);
 }
 .task .task-change-logo {
   width: 20px;
@@ -403,6 +423,8 @@ table {
 .task .button-wrapper .task-open-description:hover, .task .button-wrapper .task-open-description:focus {
   cursor: pointer;
   opacity: 0.7;
+  -webkit-transform: scale(1.1);
+          transform: scale(1.1);
 }
 .task .button-wrapper .task-delete {
   border: none;
@@ -410,8 +432,10 @@ table {
   margin: 0 15px;
 }
 .task .button-wrapper .task-delete:hover, .task .button-wrapper .task-delete:focus {
-  background-color: red;
   cursor: pointer;
+  opacity: 0.7;
+  -webkit-transform: scale(1.1);
+          transform: scale(1.1);
 }
 .task .button-wrapper .task-delete-ico {
   width: 20px;
@@ -431,6 +455,7 @@ table {
 .completed-tasks-title,
 .current-tasks-title {
   margin: 20px 0;
+  font-size: 20px;
 }
 
 .task-description-text h1,
@@ -616,6 +641,12 @@ table {
 /* Стили для выбора типа диаграммы */
 .chart-type-selector {
   margin: 20px 0;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
 }
 
 .chart-type-selector select {
@@ -676,6 +707,7 @@ table {
   padding: 5px;
   border-radius: 4px;
   border: 1px solid #ddd;
+  min-width: 140px;
 }
 .filter-controls .category-controls .category-manager-btn {
   background-color: transparent;
@@ -854,10 +886,11 @@ table {
   font-size: 14px;
   color: #666;
   white-space: nowrap;
+  min-width: 63px;
 }
 
 .new-task-due-date {
-  margin-left: 55px;
+  margin: 0 0 0 55px;
   padding: 5px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -938,6 +971,8 @@ table {
 
 .task-change-date:hover {
   opacity: 1;
+  -webkit-transform: scale(1.1);
+          transform: scale(1.1);
 }
 
 .task-change-date-logo {
@@ -950,6 +985,7 @@ table {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  margin: 0 0 0 20px;
 }
 
 .date-sort {
@@ -1396,6 +1432,9 @@ body {
   width: 80%;
   margin: 0 auto;
   min-width: 570px;
+  max-width: 1440px;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
 }
 
 .display-block {

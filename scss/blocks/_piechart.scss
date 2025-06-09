@@ -66,6 +66,8 @@
 /* Стили для выбора типа диаграммы */
 .chart-type-selector {
     margin: 20px 0;
+    display: flex;
+    justify-content: center;
 }
 
 .chart-type-selector select {
