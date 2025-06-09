@@ -3,10 +3,11 @@
     font-size: 14px;
     color: #666;
     white-space: nowrap;
+    min-width: 63px;
 }
 
 .new-task-due-date {
-    margin-left: 55px;
+    margin: 0 0 0 55px;
     padding: 5px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -87,6 +88,7 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    margin: 0 0 0 20px;
 }
 
 .date-sort {
