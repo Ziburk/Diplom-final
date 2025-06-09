@@ -557,10 +557,10 @@ function createTaskElement(task, index, isCompleted) {
         <div class="task-title-wrapper">
             <input class="task-comp hidden" type="checkbox" name="task-comp" ${isCompleted ? 'checked' : ''}>
             <label class="check-label" for="task-comp"></label>
+            <h3 class="task-title" title="${task.title || 'Без названия'}">${truncateTitle(task.title)}</h3>
             <span class="task-category" style="background-color: ${category.color}">
                 ${category.name}
             </span>
-            <h3 class="task-title" title="${task.title || 'Без названия'}">${truncateTitle(task.title)}</h3>
             <button class="task-change">
                 <img class="task-change-logo" src="img/edit-ico.svg" alt="Редактировать">
             </button>
@@ -1038,7 +1038,7 @@ async function addTask() {
 
     newTask.innerHTML = `
         <div class="task-title-wrapper">
-            <img class="new-task-ico" src="img/task-ico.png" alt="check">
+            <img class="new-task-ico" src="img/checkbox-empty.svg" alt="check">
             <select class="new-task-category">
                 ${categoryOptions}
             </select>

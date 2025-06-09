@@ -253,16 +253,17 @@ table {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+  padding: 15px 0;
 }
 .new-task-ico {
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   margin: 0 10px 0 13px;
 }
 .new-task-title {
   width: 80%;
   font-weight: 500;
-  font-size: 24px;
+  font-size: 17px;
   line-height: 1.5;
   color: black;
   border: none;
@@ -294,13 +295,13 @@ table {
   -webkit-box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
           box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
   border-radius: 24px 24px 24px 24px;
-  min-height: 89px;
+  min-height: 60px;
   background-color: #FFF;
   border: 5px solid;
   position: relative;
 }
 .task-wrapper {
-  margin: 26px 0;
+  margin: 15px 0;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -310,9 +311,12 @@ table {
   -webkit-box-pack: justify;
       -ms-flex-pack: justify;
           justify-content: space-between;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
 }
 .task .task-title {
-  font-size: 24px;
+  font-size: 17px;
   line-height: 1.5;
   font-weight: 500;
   font-style: normal;
@@ -338,7 +342,7 @@ table {
   font-family: "Montserrat";
 }
 .task .task-comp:checked + .check-label {
-  background-image: url(https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Light_green_check.svg/600px-Light_green_check.svg.png);
+  background-image: url("../img/checkbox-checked.svg");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
@@ -351,11 +355,11 @@ table {
 .task .check-label::before {
   content: "";
   position: absolute;
-  background-image: url("../img/task-ico.png");
+  background-image: url("../img/checkbox-empty.svg");
   background-size: cover;
   background-position: 0;
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   top: 50%;
   left: 50%;
   -webkit-transform: translate(-50%, -50%);
@@ -365,14 +369,20 @@ table {
   cursor: pointer;
 }
 .task .task-category {
-  display: inline-block;
-  border-radius: 10px 0 0 0;
+  border-radius: 10px;
   padding: 5px;
-  font-size: 17px;
+  font-size: 13px;
   color: white;
-  position: absolute;
-  top: 0;
-  left: 0px;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  margin: 0 0 0 10px;
 }
 .task .task-change {
   margin: 0 10px;
