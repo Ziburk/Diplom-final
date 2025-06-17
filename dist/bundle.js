@@ -59811,7 +59811,7 @@ function _addTask() {
                 }
               }, _callee13, null, [[2, 5]]);
             }));
-            return function (_x16) {
+            return function (_x13) {
               return _ref0.apply(this, arguments);
             };
           }());
@@ -60733,7 +60733,7 @@ function _updateProductivityChart() {
 function initExportModal() {
   var modal = document.createElement('div');
   modal.className = 'export-modal';
-  modal.innerHTML = "\n        <div class=\"modal-content\">\n            <h3>\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u0437\u0430\u0434\u0430\u0447 \u0432 PDF</h3>\n            \n            <div class=\"export-options\">\n                <label>\u0422\u0438\u043F \u044D\u043A\u0441\u043F\u043E\u0440\u0442\u0430:</label>\n                <select id=\"export-type\">\n                    <option value=\"".concat(EXPORT_TYPES.SELECTED, "\">\u0422\u043E\u043B\u044C\u043A\u043E \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u0434\u0430\u0447\u0438</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_TASKS, "\">\u0412\u0441\u0435 \u0437\u0430\u0434\u0430\u0447\u0438</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_COMPLETED, "\">\u0412\u0441\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_ACTIVE, "\">\u0412\u0441\u0435 \u043D\u0435\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435</option>\n                    <option value=\"").concat(EXPORT_TYPES.BY_DATE_RANGE, "\">\u0417\u0430\u0434\u0430\u0447\u0438 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434</option>\n                </select>\n                \n                <div id=\"date-range-options\" class=\"hidden\">\n                    <label>\u041F\u0435\u0440\u0438\u043E\u0434:</label>\n                    <input type=\"date\" id=\"export-start-date\">\n                    <span>\u043F\u043E</span>\n                    <input type=\"date\" id=\"export-end-date\">\n                </div>\n                \n                <div id=\"selected-tasks-container\">\n                    <label>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u0434\u043B\u044F \u044D\u043A\u0441\u043F\u043E\u0440\u0442\u0430:</label>\n                    <div id=\"selected-tasks-list\" class=\"export-tasks-list\"></div>\n                </div>\n                \n                <div class=\"export-chart-options\">\n                    <label>\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u0443:</label>\n                    <select id=\"export-chart-type\">\n                        <option value=\"").concat(EXPORT_CHART_TYPES.NONE, "\">\u041D\u0435\u0442</option>\n                        <option value=\"").concat(EXPORT_CHART_TYPES.COMPLETION, "\">\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435/\u041D\u0435\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435</option>\n                        <option value=\"").concat(EXPORT_CHART_TYPES.BY_CATEGORY, "\">\u041F\u043E \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u044F\u043C</option>\n                    </select>\n                </div>\n                \n                <div class=\"export-productivity-options\">\n                    <label>\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0433\u0440\u0430\u0444\u0438\u043A \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0438:</label>\n                    <select id=\"export-productivity-type\">\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.NONE, "\">\u041D\u0435\u0442</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_7_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 7 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_14_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 14 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_30_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 30 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.CUSTOM, "\">\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u0435\u0440\u0438\u043E\u0434</option>\n                    </select>\n                    \n                    <div id=\"export-productivity-custom\" class=\"hidden\">\n                        <label>\u041F\u0435\u0440\u0438\u043E\u0434:</label>\n                        <input type=\"date\" id=\"export-productivity-start-date\">\n                        <span>\u043F\u043E</span>\n                        <input type=\"date\" id=\"export-productivity-end-date\">\n                    </div>\n                </div>\n            </div>\n            \n            <div class=\"modal-buttons\">\n                <button id=\"generate-pdf-btn\">\u0421\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C PDF</button>\n                <button id=\"close-export-modal\">\u0417\u0430\u043A\u0440\u044B\u0442\u044C</button>\n            </div>\n        </div>\n    ");
+  modal.innerHTML = "\n        <div class=\"modal-content\">\n            <h3>\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u0437\u0430\u0434\u0430\u0447 \u0432 PDF</h3>\n            \n            <div class=\"export-options\">\n                <label>\u0422\u0438\u043F \u044D\u043A\u0441\u043F\u043E\u0440\u0442\u0430:</label>\n                <select id=\"export-type\">\n                    <option value=\"".concat(EXPORT_TYPES.SELECTED, "\">\u0422\u043E\u043B\u044C\u043A\u043E \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u0434\u0430\u0447\u0438</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_TASKS, "\">\u0412\u0441\u0435 \u0437\u0430\u0434\u0430\u0447\u0438</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_COMPLETED, "\">\u0412\u0441\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435</option>\n                    <option value=\"").concat(EXPORT_TYPES.ALL_ACTIVE, "\">\u0412\u0441\u0435 \u043D\u0435\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435</option>\n                    <option value=\"").concat(EXPORT_TYPES.BY_DATE_RANGE, "\">\u0417\u0430\u0434\u0430\u0447\u0438 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434</option>\n                </select>\n                \n                <div id=\"date-range-options\" class=\"hidden\">\n                    <label>\u041F\u0435\u0440\u0438\u043E\u0434:</label>\n                    <input type=\"date\" id=\"export-start-date\">\n                    <span>\u043F\u043E</span>\n                    <input type=\"date\" id=\"export-end-date\">\n                </div>\n                \n                <div id=\"selected-tasks-container\">\n                    <label>\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u0434\u043B\u044F \u044D\u043A\u0441\u043F\u043E\u0440\u0442\u0430:</label>\n                    <div id=\"selected-tasks-list\" class=\"export-tasks-list\"></div>\n                </div>\n                \n                <div class=\"export-productivity-options\">\n                    <label>\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0433\u0440\u0430\u0444\u0438\u043A \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0438:</label>\n                    <select id=\"export-productivity-type\">\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.NONE, "\">\u041D\u0435\u0442</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_7_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 7 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_14_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 14 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.LAST_30_DAYS, "\">\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 30 \u0434\u043D\u0435\u0439</option>\n                        <option value=\"").concat(EXPORT_PRODUCTIVITY_TYPES.CUSTOM, "\">\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u0435\u0440\u0438\u043E\u0434</option>\n                    </select>\n                    \n                    <div id=\"export-productivity-custom\" class=\"hidden\">\n                        <label>\u041F\u0435\u0440\u0438\u043E\u0434:</label>\n                        <input type=\"date\" id=\"export-productivity-start-date\">\n                        <span>\u043F\u043E</span>\n                        <input type=\"date\" id=\"export-productivity-end-date\">\n                    </div>\n                </div>\n            </div>\n            \n            <div class=\"modal-buttons\">\n                <button id=\"generate-pdf-btn\">\u0421\u0433\u0435\u043D\u0435\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C PDF</button>\n                <button id=\"close-export-modal\">\u0417\u0430\u043A\u0440\u044B\u0442\u044C</button>\n            </div>\n        </div>\n    ");
   document.body.appendChild(modal);
 
   // Сразу рендерим список задач для выбора
@@ -60907,7 +60907,7 @@ function generatePdf() {
 function _generatePdf() {
   _generatePdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25() {
     var _document$querySelect;
-    var exportTasks, docDefinition, totalTasks, chartType, productivityType;
+    var exportTasks, docDefinition, totalTasks, productivityType;
     return _regenerator().w(function (_context25) {
       while (1) switch (_context25.n) {
         case 0:
@@ -61006,30 +61006,21 @@ function _generatePdf() {
             margin: [0, 0, 0, 20]
           });
 
-          // Добавляем диаграмму, если выбрано
-          chartType = document.getElementById('export-chart-type').value;
-          if (!(chartType !== EXPORT_CHART_TYPES.NONE && totalTasks > 0)) {
+          // Добавляем график продуктивности, если выбрано
+          productivityType = document.getElementById('export-productivity-type').value;
+          if (!(productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE)) {
             _context25.n = 1;
             break;
           }
           _context25.n = 1;
-          return addChartToPdf(docDefinition, exportTasks, chartType);
-        case 1:
-          // Добавляем график продуктивности, если выбрано
-          productivityType = document.getElementById('export-productivity-type').value;
-          if (!(productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE)) {
-            _context25.n = 2;
-            break;
-          }
-          _context25.n = 2;
           return addProductivityChartToPdf(docDefinition, productivityType);
-        case 2:
+        case 1:
           // Генерируем PDF
           pdfMake.createPdf(docDefinition).download('tasks_export.pdf');
 
           // Закрываем модальное окно
           (_document$querySelect = document.querySelector('.export-modal')) === null || _document$querySelect === void 0 || _document$querySelect.remove();
-        case 3:
+        case 2:
           return _context25.a(2);
       }
     }, _callee25);
@@ -61079,128 +61070,15 @@ function addTaskToPdf(docDefinition, task, isCompleted) {
   });
 }
 
-// Функция для добавления диаграммы в PDF
-function addChartToPdf(_x11, _x12, _x13) {
-  return _addChartToPdf.apply(this, arguments);
-} // Функция для добавления графика продуктивности в PDF
-function _addChartToPdf() {
-  _addChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee26(docDefinition, exportTasks, chartType) {
-    var chartData, chartTitle, categoryCounts, categoryColors, labels, data, backgroundColors, chartImage, legendItems, _t18;
+// Функция для добавления графика продуктивности в PDF
+function addProductivityChartToPdf(_x11, _x12) {
+  return _addProductivityChartToPdf.apply(this, arguments);
+} // Функция для создания изображения столбчатой диаграммы
+function _addProductivityChartToPdf() {
+  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee26(docDefinition, productivityType) {
+    var startDate, endDate, startDateStr, endDateStr, days, productivityData, dateArray, currentDate, labels, data, chartData, canvas, ctx, chartImage, totalCompleted, avgCompleted, _t18;
     return _regenerator().w(function (_context26) {
       while (1) switch (_context26.n) {
-        case 0:
-          // Создаем данные для диаграммы
-
-          if (chartType === EXPORT_CHART_TYPES.COMPLETION) {
-            chartTitle = 'Соотношение выполненных и активных задач';
-            chartData = {
-              labels: ['Выполненные', 'Активные'],
-              datasets: [{
-                data: [exportTasks.completed.length, exportTasks.active.length],
-                backgroundColor: ['#4CAF50', '#FF9800']
-              }]
-            };
-          } else if (chartType === EXPORT_CHART_TYPES.BY_CATEGORY) {
-            chartTitle = 'Распределение задач по категориям';
-
-            // Собираем данные по категориям
-            categoryCounts = {};
-            categoryColors = {}; // Обрабатываем активные задачи
-            exportTasks.active.forEach(function (task) {
-              var categoryId = task.category || defaultCategoryId;
-              categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-              if (!categoryColors[categoryId]) {
-                var _categories$categoryI;
-                categoryColors[categoryId] = ((_categories$categoryI = categories[categoryId]) === null || _categories$categoryI === void 0 ? void 0 : _categories$categoryI.color) || '#607D8B';
-              }
-            });
-
-            // Обрабатываем выполненные задачи
-            exportTasks.completed.forEach(function (task) {
-              var categoryId = task.category || defaultCategoryId;
-              categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-              if (!categoryColors[categoryId]) {
-                var _categories$categoryI2;
-                categoryColors[categoryId] = ((_categories$categoryI2 = categories[categoryId]) === null || _categories$categoryI2 === void 0 ? void 0 : _categories$categoryI2.color) || '#607D8B';
-              }
-            });
-
-            // Формируем данные для диаграммы
-            labels = [];
-            data = [];
-            backgroundColors = [];
-            Object.keys(categoryCounts).forEach(function (categoryId) {
-              var category = categories[categoryId] || categories[defaultCategoryId];
-              labels.push(category.name);
-              data.push(categoryCounts[categoryId]);
-              backgroundColors.push(categoryColors[categoryId]);
-            });
-            chartData = {
-              labels: labels,
-              datasets: [{
-                data: data,
-                backgroundColor: backgroundColors
-              }]
-            };
-          }
-
-          // Добавляем заголовок диаграммы
-          docDefinition.content.push({
-            text: chartTitle,
-            style: 'subheader',
-            margin: [0, 20, 0, 10]
-          });
-          _context26.p = 1;
-          _context26.n = 2;
-          return getChartImage(chartData);
-        case 2:
-          chartImage = _context26.v;
-          // Добавляем саму диаграмму
-          docDefinition.content.push({
-            image: chartImage,
-            width: 400,
-            alignment: 'center',
-            margin: [0, 0, 0, 20]
-          });
-
-          // Добавляем легенду
-          legendItems = [];
-          chartData.labels.forEach(function (label, index) {
-            legendItems.push({
-              text: "".concat(label, ": ").concat(chartData.datasets[0].data[index]),
-              margin: [0, 0, 0, 5]
-            });
-          });
-          docDefinition.content.push({
-            stack: legendItems,
-            margin: [50, 0, 0, 20]
-          });
-          _context26.n = 4;
-          break;
-        case 3:
-          _context26.p = 3;
-          _t18 = _context26.v;
-          console.error('Ошибка при создании диаграммы:', _t18);
-          docDefinition.content.push({
-            text: 'Не удалось создать диаграмму',
-            color: 'red',
-            margin: [0, 0, 0, 20]
-          });
-        case 4:
-          return _context26.a(2);
-      }
-    }, _callee26, null, [[1, 3]]);
-  }));
-  return _addChartToPdf.apply(this, arguments);
-}
-function addProductivityChartToPdf(_x14, _x15) {
-  return _addProductivityChartToPdf.apply(this, arguments);
-} // Функция для создания изображения круговой диаграммы
-function _addProductivityChartToPdf() {
-  _addProductivityChartToPdf = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee27(docDefinition, productivityType) {
-    var startDate, endDate, startDateStr, endDateStr, days, productivityData, dateArray, currentDate, labels, data, chartData, canvas, ctx, chartImage, totalCompleted, avgCompleted, _t19;
-    return _regenerator().w(function (_context27) {
-      while (1) switch (_context27.n) {
         case 0:
           endDate = new Date();
           endDate.setHours(23, 59, 59, 999);
@@ -61224,14 +61102,14 @@ function _addProductivityChartToPdf() {
             startDate.setDate(startDate.getDate() - days + 1);
             startDate.setHours(0, 0, 0, 0);
           }
-          _context27.p = 1;
-          _context27.n = 2;
+          _context26.p = 1;
+          _context26.n = 2;
           return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].getProductivityData({
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString()
           });
         case 2:
-          productivityData = _context27.v;
+          productivityData = _context26.v;
           // Создаем массив дат для отображения
           dateArray = [];
           currentDate = new Date(startDate);
@@ -61329,56 +61207,24 @@ function _addProductivityChartToPdf() {
             text: ["\u0412\u0441\u0435\u0433\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E \u0437\u0430\u0434\u0430\u0447 \u0437\u0430 \u043F\u0435\u0440\u0438\u043E\u0434: ".concat(totalCompleted, "\n"), "\u0421\u0440\u0435\u0434\u043D\u0435\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0445 \u0437\u0430\u0434\u0430\u0447 \u0432 \u0434\u0435\u043D\u044C: ".concat(avgCompleted.toFixed(1))],
             margin: [0, 0, 0, 20]
           });
-          _context27.n = 4;
+          _context26.n = 4;
           break;
         case 3:
-          _context27.p = 3;
-          _t19 = _context27.v;
-          console.error('Ошибка при создании графика продуктивности:', _t19);
+          _context26.p = 3;
+          _t18 = _context26.v;
+          console.error('Ошибка при создании графика продуктивности:', _t18);
           docDefinition.content.push({
             text: 'Не удалось создать график продуктивности',
             color: 'red',
             margin: [0, 0, 0, 20]
           });
         case 4:
-          return _context27.a(2);
+          return _context26.a(2);
       }
-    }, _callee27, null, [[1, 3]]);
+    }, _callee26, null, [[1, 3]]);
   }));
   return _addProductivityChartToPdf.apply(this, arguments);
 }
-function getChartImage(chartData) {
-  return new Promise(function (resolve) {
-    // Создаем временный canvas
-    var canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
-    var ctx = canvas.getContext('2d');
-
-    // Создаем диаграмму
-    new chart_js_auto__WEBPACK_IMPORTED_MODULE_2__["default"](ctx, {
-      type: 'pie',
-      data: chartData,
-      options: {
-        responsive: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        animation: {
-          onComplete: function onComplete() {
-            // После завершения анимации получаем данные изображения
-            var image = canvas.toDataURL('image/png');
-            resolve(image);
-          }
-        }
-      }
-    });
-  });
-}
-
-// Функция для создания изображения столбчатой диаграммы
 function getBarChartImage(chartData) {
   return new Promise(function (resolve) {
     // Создаем временный canvas

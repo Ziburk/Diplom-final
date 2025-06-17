@@ -1889,15 +1889,6 @@ function initExportModal() {
                     <div id="selected-tasks-list" class="export-tasks-list"></div>
                 </div>
                 
-                <div class="export-chart-options">
-                    <label>Добавить диаграмму:</label>
-                    <select id="export-chart-type">
-                        <option value="${EXPORT_CHART_TYPES.NONE}">Нет</option>
-                        <option value="${EXPORT_CHART_TYPES.COMPLETION}">Выполненные/Невыполненные</option>
-                        <option value="${EXPORT_CHART_TYPES.BY_CATEGORY}">По категориям</option>
-                    </select>
-                </div>
-                
                 <div class="export-productivity-options">
                     <label>Добавить график продуктивности:</label>
                     <select id="export-productivity-type">
@@ -2176,12 +2167,6 @@ async function generatePdf() {
         margin: [0, 0, 0, 20]
     });
 
-    // Добавляем диаграмму, если выбрано
-    const chartType = document.getElementById('export-chart-type').value;
-    if (chartType !== EXPORT_CHART_TYPES.NONE && totalTasks > 0) {
-        await addChartToPdf(docDefinition, exportTasks, chartType);
-    }
-
     // Добавляем график продуктивности, если выбрано
     const productivityType = document.getElementById('export-productivity-type').value;
     if (productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE) {
@@ -2234,113 +2219,6 @@ function addTaskToPdf(docDefinition, task, isCompleted) {
         canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, lineColor: '#eee' }],
         margin: [0, 5, 0, 5]
     });
-}
-
-// Функция для добавления диаграммы в PDF
-async function addChartToPdf(docDefinition, exportTasks, chartType) {
-    // Создаем данные для диаграммы
-    let chartData;
-    let chartTitle;
-
-    if (chartType === EXPORT_CHART_TYPES.COMPLETION) {
-        chartTitle = 'Соотношение выполненных и активных задач';
-        chartData = {
-            labels: ['Выполненные', 'Активные'],
-            datasets: [
-                {
-                    data: [exportTasks.completed.length, exportTasks.active.length],
-                    backgroundColor: ['#4CAF50', '#FF9800']
-                }
-            ]
-        };
-    } else if (chartType === EXPORT_CHART_TYPES.BY_CATEGORY) {
-        chartTitle = 'Распределение задач по категориям';
-
-        // Собираем данные по категориям
-        const categoryCounts = {};
-        const categoryColors = {};
-
-        // Обрабатываем активные задачи
-        exportTasks.active.forEach(task => {
-            const categoryId = task.category || defaultCategoryId;
-            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-            if (!categoryColors[categoryId]) {
-                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
-            }
-        });
-
-        // Обрабатываем выполненные задачи
-        exportTasks.completed.forEach(task => {
-            const categoryId = task.category || defaultCategoryId;
-            categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-            if (!categoryColors[categoryId]) {
-                categoryColors[categoryId] = categories[categoryId]?.color || '#607D8B';
-            }
-        });
-
-        // Формируем данные для диаграммы
-        const labels = [];
-        const data = [];
-        const backgroundColors = [];
-
-        Object.keys(categoryCounts).forEach(categoryId => {
-            const category = categories[categoryId] || categories[defaultCategoryId];
-            labels.push(category.name);
-            data.push(categoryCounts[categoryId]);
-            backgroundColors.push(categoryColors[categoryId]);
-        });
-
-        chartData = {
-            labels: labels,
-            datasets: [
-                {
-                    data: data,
-                    backgroundColor: backgroundColors
-                }
-            ]
-        };
-    }
-
-    // Добавляем заголовок диаграммы
-    docDefinition.content.push({
-        text: chartTitle,
-        style: 'subheader',
-        margin: [0, 20, 0, 10]
-    });
-
-    try {
-        // Получаем изображение диаграммы
-        const chartImage = await getChartImage(chartData);
-
-        // Добавляем саму диаграмму
-        docDefinition.content.push({
-            image: chartImage,
-            width: 400,
-            alignment: 'center',
-            margin: [0, 0, 0, 20]
-        });
-
-        // Добавляем легенду
-        const legendItems = [];
-        chartData.labels.forEach((label, index) => {
-            legendItems.push({
-                text: `${label}: ${chartData.datasets[0].data[index]}`,
-                margin: [0, 0, 0, 5]
-            });
-        });
-
-        docDefinition.content.push({
-            stack: legendItems,
-            margin: [50, 0, 0, 20]
-        });
-    } catch (error) {
-        console.error('Ошибка при создании диаграммы:', error);
-        docDefinition.content.push({
-            text: 'Не удалось создать диаграмму',
-            color: 'red',
-            margin: [0, 0, 0, 20]
-        });
-    }
 }
 
 // Функция для добавления графика продуктивности в PDF
@@ -2492,38 +2370,6 @@ async function addProductivityChartToPdf(docDefinition, productivityType) {
             margin: [0, 0, 0, 20]
         });
     }
-}
-
-// Функция для создания изображения круговой диаграммы
-function getChartImage(chartData) {
-    return new Promise((resolve) => {
-        // Создаем временный canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-
-        // Создаем диаграмму
-        new Chart(ctx, {
-            type: 'pie',
-            data: chartData,
-            options: {
-                responsive: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                animation: {
-                    onComplete: () => {
-                        // После завершения анимации получаем данные изображения
-                        const image = canvas.toDataURL('image/png');
-                        resolve(image);
-                    }
-                }
-            }
-        });
-    });
 }
 
 // Функция для создания изображения столбчатой диаграммы
