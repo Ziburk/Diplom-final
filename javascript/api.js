@@ -132,11 +132,7 @@ class TodoAPI {
         });
     }
 
-    /**
-     * Обновляет порядок задач
-     * @param {Array<{taskId: string, order: number}>} orderData - Массив с новым порядком задач
-     * @returns {Promise<void>}
-     */
+    //Обновляет порядок задач
     async updateTaskOrder(orderData) {
         return this.fetchAPI('/tasks/order', {
             method: 'PATCH',
@@ -144,26 +140,13 @@ class TodoAPI {
         });
     }
 
-    /**
-     * Получает данные о продуктивности за период
-     * @param {Object} params - Параметры запроса
-     * @param {string} params.startDate - Начальная дата
-     * @param {string} params.endDate - Конечная дата
-     * @returns {Promise<Array>} Массив с данными о продуктивности
-     */
+    //Получает данные о продуктивности за период
     async getProductivityData(params) {
         const queryParams = new URLSearchParams(params);
         return this.fetchAPI(`/tasks/stats/productivity?${queryParams.toString()}`);
     }
 
-    /**
-     * Обновляет настройки уведомлений задачи
-     * @param {string} taskId - ID задачи
-     * @param {Object} notificationSettings - Настройки уведомлений
-     * @param {boolean} notificationSettings.notifications_enabled - Включены ли уведомления
-     * @param {string|null} notificationSettings.notification_time - Время уведомления в ISO формате
-     * @returns {Promise<Object>} Обновленная задача
-     */
+    //Обновляет настройки уведомлений задачи
     async updateTaskNotifications(taskId, notificationSettings) {
         return this.fetchAPI(`/tasks/${taskId}/notifications`, {
             method: 'PATCH',

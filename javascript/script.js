@@ -94,19 +94,24 @@ const init = async () => {
 
         // Проверяем валидность токена
         try {
+            // Отправляем запрос на сервер для проверки валидности токена
             const response = await fetch('/api/auth/verify', {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}` // Добавляем токен в заголовок запроса
                 }
             });
             
+            // Если ответ не успешный (не 200-299), значит токен недействителен
             if (!response.ok) {
                 throw new Error('Токен недействителен');
             }
 
-            // Обновляем UI для авторизованного пользователя
+            // Если токен валиден, обновляем интерфейс пользователя
+            // используя сохраненные данные из localStorage
             updateUIForLoggedInUser(JSON.parse(savedUser));
         } catch (error) {
+            // В случае любой ошибки (сетевой, невалидного токена и т.д.)
+            // логируем ошибку и перенаправляем на страницу входа
             console.error('Ошибка проверки токена:', error);
             window.location.href = '/login.html';
             return;
