@@ -776,6 +776,10 @@ function showNotificationDropdown(taskElement, task) {
             task.notifications_enabled = toggleSwitch.checked;
             task.notification_time = updateData.notification_time;
             
+            // Перезагружаем задачи и обновляем UI
+            await loadTasks();
+            updateUI();
+            
             dropdown.remove();
         } catch (error) {
             console.error('Ошибка при сохранении настроек уведомления:', error);
@@ -1458,35 +1462,29 @@ async function changeTaskDate(event) {
 
             const task = await todoAPI.findTask(taskId);
 
-            if (task.notifications_enabled && task.notification_time) {
-                const notificationDate = new Date(task.notification_time);
-                const oldTaskDate = new Date(task.due_date);
-                
-                if (notificationDate.getHours() === 8 && 
-                    notificationDate.getMinutes() === 0 &&
-                    notificationDate.getDate() === oldTaskDate.getDate() &&
-                    notificationDate.getMonth() === oldTaskDate.getMonth() &&
-                    notificationDate.getFullYear() === oldTaskDate.getFullYear()) {
-                    
-                    if (newDate) {
-                        const newNotificationDate = new Date(newDate);
-                        newNotificationDate.setHours(8, 0, 0, 0);
-                        await todoAPI.updateTaskNotifications(taskId, {
-                            notifications_enabled: true,
-                            notification_time: newNotificationDate.toISOString()
-                        });
-                    } else {
-                        await todoAPI.updateTaskNotifications(taskId, {
-                            notifications_enabled: false,
-                            notification_time: null
-                        });
-                    }
+            // Обновляем уведомления только если они были включены
+            if (task.notifications_enabled) {
+                if (newDate) {
+                    const newNotificationDate = new Date(newDate);
+                    newNotificationDate.setHours(8, 0, 0, 0);
+                    await todoAPI.updateTaskNotifications(taskId, {
+                        notifications_enabled: true,
+                        notification_time: newNotificationDate.toISOString()
+                    });
+                } else {
+                    await todoAPI.updateTaskNotifications(taskId, {
+                        notifications_enabled: false,
+                        notification_time: null
+                    });
                 }
             }
 
+            // Обновляем дату задачи
             await todoAPI.updateTask(taskId, { due_date: newDate });
-            await loadTasks(); // Перезагружаем задачи
-            updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
+            
+            // Перезагружаем задачи и обновляем UI
+            await loadTasks();
+            updateUI();
 
             toggleTaskDraggable(taskElement, true);
             document.removeEventListener('click', handleOutsideClick);

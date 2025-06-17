@@ -344,15 +344,10 @@ var TodoAPI = /*#__PURE__*/function () {
         return _uncompleteTask.apply(this, arguments);
       }
       return uncompleteTask;
-    }()
-    /**
-     * Обновляет порядок задач
-     * @param {Array<{taskId: string, order: number}>} orderData - Массив с новым порядком задач
-     * @returns {Promise<void>}
-     */
+    }() //Обновляет порядок задач
   }, {
     key: "updateTaskOrder",
-    value: (function () {
+    value: function () {
       var _updateTaskOrder = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(orderData) {
         return _regenerator().w(function (_context12) {
           while (1) switch (_context12.n) {
@@ -370,18 +365,10 @@ var TodoAPI = /*#__PURE__*/function () {
         return _updateTaskOrder.apply(this, arguments);
       }
       return updateTaskOrder;
-    }()
-    /**
-     * Получает данные о продуктивности за период
-     * @param {Object} params - Параметры запроса
-     * @param {string} params.startDate - Начальная дата
-     * @param {string} params.endDate - Конечная дата
-     * @returns {Promise<Array>} Массив с данными о продуктивности
-     */
-    )
+    }() //Получает данные о продуктивности за период
   }, {
     key: "getProductivityData",
-    value: (function () {
+    value: function () {
       var _getProductivityData = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(params) {
         var queryParams;
         return _regenerator().w(function (_context13) {
@@ -396,19 +383,10 @@ var TodoAPI = /*#__PURE__*/function () {
         return _getProductivityData.apply(this, arguments);
       }
       return getProductivityData;
-    }()
-    /**
-     * Обновляет настройки уведомлений задачи
-     * @param {string} taskId - ID задачи
-     * @param {Object} notificationSettings - Настройки уведомлений
-     * @param {boolean} notificationSettings.notifications_enabled - Включены ли уведомления
-     * @param {string|null} notificationSettings.notification_time - Время уведомления в ISO формате
-     * @returns {Promise<Object>} Обновленная задача
-     */
-    )
+    }() //Обновляет настройки уведомлений задачи
   }, {
     key: "updateTaskNotifications",
-    value: (function () {
+    value: function () {
       var _updateTaskNotifications = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14(taskId, notificationSettings) {
         return _regenerator().w(function (_context14) {
           while (1) switch (_context14.n) {
@@ -424,7 +402,7 @@ var TodoAPI = /*#__PURE__*/function () {
         return _updateTaskNotifications.apply(this, arguments);
       }
       return updateTaskNotifications;
-    }())
+    }()
   }]);
 }(); // Создаем и экспортируем экземпляр API
 var todoAPI = new TodoAPI();
@@ -58659,7 +58637,7 @@ var init = /*#__PURE__*/function () {
           _context2.n = 2;
           return fetch('/api/auth/verify', {
             headers: {
-              'Authorization': "Bearer ".concat(token)
+              'Authorization': "Bearer ".concat(token) // Добавляем токен в заголовок запроса
             }
           });
         case 2:
@@ -58670,13 +58648,16 @@ var init = /*#__PURE__*/function () {
           }
           throw new Error('Токен недействителен');
         case 3:
-          // Обновляем UI для авторизованного пользователя
+          // Если токен валиден, обновляем интерфейс пользователя
+          // используя сохраненные данные из localStorage
           updateUIForLoggedInUser(JSON.parse(savedUser));
           _context2.n = 5;
           break;
         case 4:
           _context2.p = 4;
           _t = _context2.v;
+          // В случае любой ошибки (сетевой, невалидного токена и т.д.)
+          // логируем ошибку и перенаправляем на страницу входа
           console.error('Ошибка проверки токена:', _t);
           window.location.href = '/login.html';
           return _context2.a(2);
@@ -59402,19 +59383,25 @@ function showNotificationDropdown(taskElement, task) {
           notificationBtn.classList.toggle('has-notification', toggleSwitch.checked);
           task.notifications_enabled = toggleSwitch.checked;
           task.notification_time = updateData.notification_time;
-          dropdown.remove();
-          _context4.n = 4;
-          break;
+
+          // Перезагружаем задачи и обновляем UI
+          _context4.n = 3;
+          return loadTasks();
         case 3:
-          _context4.p = 3;
+          updateUI();
+          dropdown.remove();
+          _context4.n = 5;
+          break;
+        case 4:
+          _context4.p = 4;
           _t3 = _context4.v;
           console.error('Ошибка при сохранении настроек уведомления:', _t3);
           errorDiv.textContent = 'Ошибка при сохранении настроек';
           errorDiv.classList.remove('hidden');
-        case 4:
+        case 5:
           return _context4.a(2);
       }
-    }, _callee4, null, [[1, 3]]);
+    }, _callee4, null, [[1, 4]]);
   })));
 
   // Закрытие дропдауна при клике вне его
@@ -60227,7 +60214,7 @@ function _changeTaskDate() {
           dateInput.focus();
           saveDate = /*#__PURE__*/function () {
             var _ref10 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee18() {
-              var taskId, newDate, localDate, task, notificationDate, oldTaskDate, newNotificationDate, newSpan, _t14;
+              var taskId, newDate, localDate, task, newNotificationDate, newSpan, _t14;
               return _regenerator().w(function (_context18) {
                 while (1) switch (_context18.n) {
                   case 0:
@@ -60243,13 +60230,7 @@ function _changeTaskDate() {
                     return _api_js__WEBPACK_IMPORTED_MODULE_3__["default"].findTask(taskId);
                   case 1:
                     task = _context18.v;
-                    if (!(task.notifications_enabled && task.notification_time)) {
-                      _context18.n = 4;
-                      break;
-                    }
-                    notificationDate = new Date(task.notification_time);
-                    oldTaskDate = new Date(task.due_date);
-                    if (!(notificationDate.getHours() === 8 && notificationDate.getMinutes() === 0 && notificationDate.getDate() === oldTaskDate.getDate() && notificationDate.getMonth() === oldTaskDate.getMonth() && notificationDate.getFullYear() === oldTaskDate.getFullYear())) {
+                    if (!task.notifications_enabled) {
                       _context18.n = 4;
                       break;
                     }
@@ -60282,9 +60263,7 @@ function _changeTaskDate() {
                     _context18.n = 6;
                     return loadTasks();
                   case 6:
-                    // Перезагружаем задачи
-                    updateUI(); // Используем updateUI вместо renderTasks для сохранения фильтров
-
+                    updateUI();
                     toggleTaskDraggable(taskElement, true);
                     document.removeEventListener('click', handleOutsideClick);
                     _context18.n = 8;

@@ -97,7 +97,7 @@ class TaskController {
                  SET title = COALESCE($1, title),
                      description = COALESCE($2, description),
                      category_id = COALESCE($3, category_id),
-                     due_date = COALESCE($4, due_date),
+                     due_date = $4,
                      notification_time = COALESCE($5, notification_time),
                      notifications_enabled = COALESCE($6, notifications_enabled),
                      status = COALESCE($7, status)
