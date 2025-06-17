@@ -1,20 +1,19 @@
-# Используем официальный образ Node.js
 FROM node:18-alpine
 
-# Создаем рабочую директорию
 WORKDIR /app
 
 # Копируем package.json и package-lock.json
 COPY package*.json ./
 
-# Устанавливаем зависимости
-RUN npm install
+# Устанавливаем только production зависимости
+RUN npm install --production
 
-# Копируем исходный код
+# Копируем все файлы проекта
 COPY . .
 
-# Собираем фронтенд
-RUN npm run build
+# Устанавливаем переменные окружения
+ENV PORT=3000
+ENV DOMAIN=m8sd-fgju-kuuh.gw-1a.dockhost.net
 
 # Открываем порт
 EXPOSE 3000
