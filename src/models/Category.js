@@ -1,14 +1,9 @@
 const pool = require('../config/db');
 
 class Category {
-    /**
-     * Создает новую категорию
-     * @param {number} userId - ID пользователя
-     * @param {Object} categoryData - Данные категории
-     * @param {string} categoryData.name - Название категории
-     * @param {string} categoryData.color - Цвет категории в формате HEX
-     * @returns {Promise<Object>} Созданная категория
-     */
+
+    //Создает новую категорию
+
     static async create(userId, { name, color }) {
         try {
             const query = `
@@ -27,11 +22,8 @@ class Category {
         }
     }
 
-    /**
-     * Получает все категории пользователя
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<Array>} Массив категорий
-     */
+    //Получает все категории пользователя
+
     static async getAllByUserId(userId) {
         try {
             const query = 'SELECT * FROM categories WHERE user_id = $1 ORDER BY created_at';
@@ -43,12 +35,8 @@ class Category {
         }
     }
 
-    /**
-     * Получает категорию по ID
-     * @param {string} categoryId - ID категории
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<Object>} Категория
-     */
+    //Получает категорию по ID
+
     static async getById(categoryId, userId) {
         try {
             const query = 'SELECT * FROM categories WHERE category_id = $1 AND user_id = $2';
@@ -60,13 +48,8 @@ class Category {
         }
     }
 
-    /**
-     * Обновляет категорию
-     * @param {string} categoryId - ID категории
-     * @param {number} userId - ID пользователя
-     * @param {Object} updateData - Данные для обновления
-     * @returns {Promise<Object>} Обновленная категория
-     */
+    //Обновляет категорию
+
     static async update(categoryId, userId, updateData) {
         try {
             const allowedFields = ['name', 'color'];
@@ -100,13 +83,8 @@ class Category {
         }
     }
 
-    /**
-     * Удаляет категорию и переносит все задачи в категорию по умолчанию
-     * @param {string} categoryId - ID категории
-     * @param {number} userId - ID пользователя
-     * @param {string} defaultCategoryId - ID категории по умолчанию
-     * @returns {Promise<boolean>} Успешность удаления
-     */
+    //Удаляет категорию и переносит все задачи в категорию по умолчанию
+
     static async delete(categoryId, userId, defaultCategoryId) {
         try {
             // Начинаем транзакцию
@@ -134,11 +112,8 @@ class Category {
         }
     }
 
-    /**
-     * Создает стандартные категории для нового пользователя
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<Array>} Массив созданных категорий
-     */
+    //Создает стандартные категории для нового пользователя
+
     static async createDefaultCategory(userId) {
         try {
             // Определяем стандартные категории
@@ -220,12 +195,8 @@ class Category {
         }
     }
 
-    /**
-     * Проверяет, существует ли категория и принадлежит ли она пользователю
-     * @param {string} categoryId - ID категории
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<boolean>} Существует ли категория
-     */
+    //Проверяет, существует ли категория и принадлежит ли она пользователю
+
     static async exists(categoryId, userId) {
         try {
             const query = 'SELECT EXISTS(SELECT 1 FROM categories WHERE category_id = $1 AND user_id = $2)';

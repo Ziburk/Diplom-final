@@ -1,0 +1,27 @@
+---
+config:
+  look: classic
+  theme: neo
+---
+sequenceDiagram
+    participant U as Пользователь
+    participant F as Frontend (login.html)
+    participant TW as Telegram Widget
+    participant AR as Auth Routes
+    participant UC as UserController
+    participant DB as Database
+    participant TB as Telegram Bot
+    U->>F: Открывает страницу входа
+    F->>TW: Инициализация виджета
+    U->>TW: Нажимает кнопку входа
+    TW->>F: Возвращает данные пользователя
+    F->>AR: Авторизация через Telegram
+    AR->>UC: Проверка/создание пользователя
+    UC->>DB: Поиск/сохранение пользователя
+    DB->>UC: Результат операции
+    UC->>AR: Генерация JWT токена
+    AR->>F: Возврат токена
+    F->>F: Сохранение токена в localStorage
+    F->>F: Переход на главную страницу
+    F->>TB: Автоматическая подписка на бота
+    TB->>U: Возможность отправки сообщений

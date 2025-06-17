@@ -1,16 +1,9 @@
 const pool = require('../config/db');
 
 class Task {
-    /**
-     * Создает новую задачу
-     * @param {number} userId - ID пользователя
-     * @param {Object} taskData - Данные задачи
-     * @param {string} taskData.title - Название задачи
-     * @param {string} [taskData.description] - Описание задачи
-     * @param {string} [taskData.category_id] - ID категории
-     * @param {string} [taskData.due_date] - Срок выполнения
-     * @returns {Promise<Object>} Созданная задача
-     */
+
+    //Создает новую задачу
+
     static async create(userId, taskData) {
         try {
             const {
@@ -49,12 +42,8 @@ class Task {
         }
     }
 
-    /**
-     * Получает все задачи пользователя с фильтрацией
-     * @param {number} userId - ID пользователя
-     * @param {Object} filters - Параметры фильтрации
-     * @returns {Promise<Object>} Объект с активными и завершенными задачами
-     */
+    //Получает все задачи пользователя с фильтрацией
+
     static async getAllByUserId(userId, filters = {}) {
         try {
             const {
@@ -144,13 +133,8 @@ class Task {
         }
     }
 
-    /**
-     * Обновляет задачу
-     * @param {number} taskId - ID задачи
-     * @param {number} userId - ID пользователя
-     * @param {Object} updateData - Данные для обновления
-     * @returns {Promise<Object>} Обновленная задача
-     */
+    //Обновляет задачу
+
     static async update(taskId, userId, updateData) {
         try {
             const allowedFields = [
@@ -188,13 +172,8 @@ class Task {
         }
     }
 
-    /**
-     * Изменяет статус задачи (активная/выполненная)
-     * @param {number} taskId - ID задачи
-     * @param {number} userId - ID пользователя
-     * @param {string} newStatus - Новый статус
-     * @returns {Promise<Object>} Обновленная задача
-     */
+    //Изменяет статус задачи (активная/выполненная)
+
     static async changeStatus(taskId, userId, newStatus) {
         try {
             const query = `
@@ -217,12 +196,8 @@ class Task {
         }
     }
 
-    /**
-     * Обновляет порядок задач
-     * @param {number} userId - ID пользователя
-     * @param {Array<{taskId: number, order: number}>} orderData - Массив с новым порядком
-     * @returns {Promise<boolean>} Успешность обновления
-     */
+    //Обновляет порядок задач
+
     static async updateOrder(userId, orderData) {
         try {
             await pool.query('BEGIN');
@@ -243,12 +218,8 @@ class Task {
         }
     }
 
-    /**
-     * Удаляет задачу
-     * @param {number} taskId - ID задачи
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<boolean>} Успешность удаления
-     */
+    //Удаляет задачу
+
     static async delete(taskId, userId) {
         try {
             const query = 'DELETE FROM tasks WHERE task_id = $1 AND user_id = $2';
@@ -260,11 +231,8 @@ class Task {
         }
     }
 
-    /**
-     * Получает статистику по задачам пользователя
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<Object>} Статистика по задачам
-     */
+    //Получает статистику по задачам пользователя
+
     static async getStatistics(userId) {
         try {
             const query = `
@@ -300,14 +268,8 @@ class Task {
         }
     }
 
-    /**
-     * Получает данные для графика продуктивности
-     * @param {number} userId - ID пользователя
-     * @param {Object} params - Параметры запроса
-     * @param {string} params.startDate - Начальная дата
-     * @param {string} params.endDate - Конечная дата
-     * @returns {Promise<Array>} Массив с данными о продуктивности
-     */
+    //Получает данные для графика продуктивности
+
     static async getProductivityData(userId, { startDate, endDate }) {
         try {
             const query = `
@@ -338,12 +300,8 @@ class Task {
         }
     }
 
-    /**
-     * Находит задачу по ID
-     * @param {number} taskId - ID задачи
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<Object|null>} Найденная задача или null
-     */
+    //Находит задачу по ID
+
     static async findById(taskId, userId) {
         try {
             const query = `
@@ -360,15 +318,8 @@ class Task {
         }
     }
 
-    /**
-     * Обновляет настройки уведомлений задачи
-     * @param {number} taskId - ID задачи
-     * @param {number} userId - ID пользователя
-     * @param {Object} settings - Настройки уведомлений
-     * @param {boolean} settings.notifications_enabled - Включены ли уведомления
-     * @param {string|null} settings.notification_time - Время уведомления
-     * @returns {Promise<Object>} Обновленная задача
-     */
+    //Обновляет настройки уведомлений задачи
+
     static async updateNotifications(taskId, userId, settings) {
         try {
             const query = `

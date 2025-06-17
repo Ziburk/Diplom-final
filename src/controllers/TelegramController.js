@@ -2,11 +2,9 @@ const User = require('../models/User');
 const Category = require('../models/Category');
 
 class TelegramController {
-    /**
-     * Обрабатывает вход пользователя через Telegram
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+
+    //Обрабатывает вход пользователя через Telegram
+
     static async handleTelegramAuth(req, res) {
         try {
             const telegramData = req.body;
@@ -59,11 +57,8 @@ class TelegramController {
         }
     }
 
-    /**
-     * Проверяет валидность токена и обновляет данные пользователя
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Проверяет валидность токена и обновляет данные пользователя
+
     static async validateAndRefreshToken(req, res) {
         try {
             const userId = req.user.user_id;
@@ -88,11 +83,8 @@ class TelegramController {
         }
     }
 
-    /**
-     * Обрабатывает выход пользователя
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обрабатывает выход пользователя
+
     static async handleLogout(req, res) {
         try {
             // В будущем здесь может быть логика для инвалидации токена

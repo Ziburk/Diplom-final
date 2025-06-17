@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant U as Пользователь
+    participant F as Frontend (index.html)
+    participant API as API.js
+    participant TR as Task Routes
+    participant TC as TaskController
+    participant TM as Task Model
+    participant NS as NotificationService
+    participant DB as Database
+    participant TB as Telegram Bot
+
+    %% Создание задачи
+    U->>F: Нажимает "Добавить задачу"
+    F->>F: Открывает форму создания
+    U->>F: Заполняет данные задачи
+    F->>API: createTask(taskData)
+    API->>TR: POST /api/tasks
+    TR->>TC: createTask(data)
+    TC->>TM: create(taskData)
+    TM->>DB: INSERT INTO tasks
+    DB->>TM: Task ID
+    
+    alt Уведомления включены
+        TC->>NS: scheduleNotification(taskId)
+        NS->>DB: INSERT INTO notification_history
+        NS->>TB: Регистрация уведомления
+    end
+    
+    TC->>TR: Новая задача
+    TR->>API: Результат операции
+    API->>F: Обновление UI
+    F->>U: Отображение новой задачи
+
+    %% Обновление статуса
+    U->>F: Отмечает задачу выполненной
+    F->>API: updateTaskStatus(taskId)
+    API->>TR: PUT /api/tasks/:id/status
+    TR->>TC: updateTaskStatus(id)
+    TC->>TM: update(taskId, status)
+    TM->>DB: UPDATE tasks
+    DB->>TM: Результат
+    TC->>TR: Обновленная задача
+    TR->>API: Результат операции
+    API->>F: Обновление UI
+    F->>U: Отображение изменений 

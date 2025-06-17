@@ -1,0 +1,34 @@
+sequenceDiagram
+    participant U as Пользователь
+    participant F as Frontend
+    participant API as API.js
+    participant TR as Task Routes
+    participant TC as TaskController
+    participant DB as Database
+    participant CH as Chart.js
+    participant PDF as PDFMake
+
+    %% Загрузка статистики
+    U->>F: Переход на вкладку статистики
+    F->>API: getStatistics()
+    API->>TR: GET /api/tasks/statistics
+    TR->>TC: getStatistics()
+    TC->>DB: SELECT статистические данные
+    DB->>TC: Результаты запросов
+    TC->>TR: Обработанные данные
+    TR->>API: JSON данные
+    API->>F: Данные для визуализации
+    F->>CH: Рендеринг графиков
+    CH->>U: Отображение статистики
+
+    %% Экспорт в PDF
+    U->>F: Нажатие "Экспорт в PDF"
+    F->>API: exportToPDF()
+    API->>TR: GET /api/tasks/export
+    TR->>TC: generateExportData()
+    TC->>DB: SELECT данные для экспорта
+    DB->>TC: Результаты
+    TC->>TR: Форматированные данные
+    TR->>API: Данные для PDF
+    API->>PDF: Генерация PDF
+    PDF->>U: Скачивание файла 

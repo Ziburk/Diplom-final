@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant NS as NotificationService
+    participant DB as Database
+    participant TB as Telegram Bot
+    participant U as Пользователь
+    participant TC as TaskController
+
+    %% Проверка уведомлений
+    loop Каждую минуту
+        NS->>DB: Проверка предстоящих уведомлений
+        DB->>NS: Список задач для уведомления
+        
+        loop Для каждой задачи
+            NS->>TB: Отправка уведомления
+            TB->>U: Сообщение в Telegram
+            NS->>DB: Запись в notification_history
+            
+            alt Задача просрочена
+                NS->>TC: Обновление статуса задачи
+                TC->>DB: UPDATE task status
+            end
+        end
+    end
+
+    %% Взаимодействие с уведомлением
+    U->>TB: Ответ на уведомление
+    TB->>TC: Обработка команды
+    TC->>DB: Обновление задачи
+    DB->>TC: Результат операции
+    TC->>TB: Подтверждение
+    TB->>U: Ответное сообщение 

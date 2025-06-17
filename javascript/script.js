@@ -2194,7 +2194,7 @@ async function generatePdf() {
 
 // Функция для добавления задачи в PDF
 function addTaskToPdf(docDefinition, task, isCompleted) {
-    const category = categories[task.category] || categories[defaultCategoryId];
+    const category = categories[task.category_id] || categories[defaultCategoryId];
 
     docDefinition.content.push({
         text: task.title || 'Без названия',  // В PDF показываем полный заголовок

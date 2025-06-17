@@ -1,11 +1,9 @@
 const Category = require('../models/Category');
 
 class CategoryController {
-    /**
-     * Получает все категории пользователя
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+
+    //Получает все категории пользователя
+
     static async getAllCategories(req, res) {
         try {
             const userId = req.user.user_id;
@@ -17,11 +15,8 @@ class CategoryController {
         }
     }
 
-    /**
-     * Создает новую категорию
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Создает новую категорию
+
     static async createCategory(req, res) {
         try {
             const userId = req.user.user_id;
@@ -49,11 +44,8 @@ class CategoryController {
         }
     }
 
-    /**
-     * Обновляет существующую категорию
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обновляет существующую категорию
+
     static async updateCategory(req, res) {
         try {
             const userId = req.user.user_id;
@@ -100,11 +92,8 @@ class CategoryController {
         }
     }
 
-    /**
-     * Удаляет категорию
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Удаляет категорию
+
     static async deleteCategory(req, res) {
         try {
             const userId = req.user.user_id;
@@ -130,11 +119,8 @@ class CategoryController {
         }
     }
 
-    /**
-     * Создает стандартные категории для нового пользователя
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Создает стандартные категории для нового пользователя
+
     static async createDefaultCategories(req, res) {
         try {
             const userId = req.user.user_id;

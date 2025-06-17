@@ -2,12 +2,8 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const User = require('../models/User');
 
-/**
- * Middleware для проверки JWT токена
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
- */
+//Middleware для проверки JWT токена
+
 const auth = async (req, res, next) => {
     try {
         // Получаем токен из заголовка

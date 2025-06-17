@@ -61058,7 +61058,7 @@ function _generatePdf() {
   return _generatePdf.apply(this, arguments);
 }
 function addTaskToPdf(docDefinition, task, isCompleted) {
-  var category = categories[task.category] || categories[defaultCategoryId];
+  var category = categories[task.category_id] || categories[defaultCategoryId];
   docDefinition.content.push({
     text: task.title || 'Без названия',
     // В PDF показываем полный заголовок

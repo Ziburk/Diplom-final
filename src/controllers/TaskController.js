@@ -3,11 +3,8 @@ const pool = require('../config/db');
 const notificationService = require('../services/notificationService');
 
 class TaskController {
-    /**
-     * Получает список всех задач пользователя с фильтрацией
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Получает список всех задач пользователя с фильтрацией
+
     static async getAllTasks(req, res) {
         try {
             const userId = req.user.user_id; // Получаем ID пользователя из объекта req.user
@@ -27,11 +24,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Получает задачу по ID
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Получает задачу по ID
+
     static async getTaskById(req, res) {
         try {
             const userId = req.user.user_id;
@@ -50,11 +44,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Создает новую задачу
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Создает новую задачу
+
     static async createTask(req, res) {
         try {
             const userId = req.user.user_id;
@@ -78,11 +69,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Обновляет существующую задачу
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обновляет существующую задачу
+
     static async updateTask(req, res) {
         const taskId = parseInt(req.params.taskId);
         const { title, description, category_id, due_date, notification_time, notifications_enabled, status } = req.body;
@@ -130,11 +118,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Изменяет статус задачи
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Изменяет статус задачи
+
     static async changeTaskStatus(req, res) {
         try {
             const userId = req.user.user_id;
@@ -158,11 +143,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Обновляет порядок задач
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обновляет порядок задач
+
     static async updateTaskOrder(req, res) {
         try {
             const userId = req.user.user_id;
@@ -180,11 +162,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Удаляет задачу
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Удаляет задачу
+
     static async deleteTask(req, res) {
         try {
             const userId = req.user.user_id;
@@ -203,11 +182,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Получает статистику по задачам
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Получает статистику по задачам
+
     static async getTaskStatistics(req, res) {
         try {
             const userId = req.user.user_id;
@@ -219,11 +195,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Получает данные для графика продуктивности
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Получает данные для графика продуктивности
+
     static async getProductivityData(req, res) {
         try {
             const userId = req.user.user_id; // Используем правильное поле из объекта пользователя
@@ -247,11 +220,8 @@ class TaskController {
         }
     }
 
-    /**
-     * Обновляет настройки уведомлений задачи
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обновляет настройки уведомлений задачи
+
     static async updateTaskNotifications(req, res) {
         try {
             const userId = req.user.user_id;

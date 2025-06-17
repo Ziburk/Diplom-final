@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant U as Пользователь
+    participant F as Frontend
+    participant API as API.js
+    participant CR as Category Routes
+    participant CC as CategoryController
+    participant CM as Category Model
+    participant DB as Database
+    participant TC as TaskController
+
+    %% Управление категориями
+    U->>F: Открытие менеджера категорий
+    F->>API: getCategories()
+    API->>CR: GET /api/categories
+    CR->>CC: getAllCategories()
+    CC->>CM: findAll()
+    CM->>DB: SELECT categories
+    DB->>CM: Список категорий
+    CM->>CC: Обработанные данные
+    CC->>CR: Результат
+    CR->>API: JSON данные
+    API->>F: Обновление UI
+    
+    %% Создание категории
+    U->>F: Создание новой категории
+    F->>API: createCategory(data)
+    API->>CR: POST /api/categories
+    CR->>CC: createCategory()
+    CC->>CM: create()
+    CM->>DB: INSERT category
+    DB->>CM: Результат
+    CM->>CC: Новая категория
+    
+    %% Обновление задач
+    CC->>TC: updateTasksCategory()
+    TC->>DB: UPDATE tasks
+    DB->>TC: Результат
+    TC->>CC: Обновление завершено
+    CC->>CR: Результат операции
+    CR->>API: Обновленные данные
+    API->>F: Обновление UI
+    F->>U: Отображение изменений 

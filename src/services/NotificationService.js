@@ -2,9 +2,8 @@ const pool = require('../config/db');
 const bot = require('../bot/bot');
 
 const notificationService = {
-    /**
-     * Проверяет и отправляет уведомления
-     */
+
+    //Проверяет и отправляет уведомления
     async checkAndSendNotifications() {
         try {
             // Получаем все активные задачи с включенными уведомлениями,
@@ -62,9 +61,7 @@ const notificationService = {
         }
     },
 
-    /**
-     * Форматирует сообщение уведомления
-     */
+    //Форматирует сообщение уведомления
     formatNotificationMessage(task) {
         const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString('ru-RU') : 'не указан';
         const category = task.category_name || 'Без категории';
@@ -76,9 +73,7 @@ const notificationService = {
                (task.description ? `\n📝 <b>Описание:</b>\n${task.description}` : '');
     },
 
-    /**
-     * Очищает историю уведомлений для задачи
-     */
+    //Очищает историю уведомлений для задачи
     async clearNotificationHistory(taskId, userId) {
         try {
             await pool.query(
@@ -90,9 +85,7 @@ const notificationService = {
         }
     },
 
-    /**
-     * Запускает сервис уведомлений
-     */
+    //Запускает сервис уведомлений
     startNotificationService() {
         // Проверяем уведомления каждую минуту
         setInterval(async () => {

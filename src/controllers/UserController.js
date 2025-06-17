@@ -1,11 +1,9 @@
 const User = require('../models/User');
 
 class UserController {
-    /**
-     * Получает информацию о текущем пользователе
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+
+    //Получает информацию о текущем пользователе
+
     static async getCurrentUser(req, res) {
         try {
             const userId = req.user.user_id;
@@ -24,11 +22,8 @@ class UserController {
         }
     }
 
-    /**
-     * Обновляет статус активности пользователя
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Обновляет статус активности пользователя
+
     static async updateActiveStatus(req, res) {
         try {
             const userId = req.user.user_id;
@@ -55,11 +50,8 @@ class UserController {
         }
     }
 
-    /**
-     * Удаляет пользователя и все его данные
-     * @param {Object} req - Express request object
-     * @param {Object} res - Express response object
-     */
+    //Удаляет пользователя и все его данные
+
     static async deleteAccount(req, res) {
         try {
             const userId = req.user.user_id;

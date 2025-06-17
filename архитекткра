@@ -1,0 +1,86 @@
+graph TB
+    subgraph Frontend["Frontend (Browser)"]
+        UI["Web Interface<br/>index.html / login.html"]
+        JS["JavaScript Client<br/>script.js / auth.js"]
+        CSS["Стили<br/>style.css / login.css"]
+        Charts["Chart.js<br/>Визуализация статистики"]
+        PDF["PDFMake<br/>Экспорт в PDF"]
+        Editor["Toast UI Editor<br/>Редактор задач"]
+    end
+
+    subgraph Backend["Backend (Node.js + Express)"]
+        Server["server.js<br/>Express Server"]
+        
+        subgraph Controllers["Controllers"]
+            TC["TaskController<br/>Управление задачами"]
+            UC["UserController<br/>Управление пользователями"]
+            CC["CategoryController<br/>Управление категориями"]
+            TGC["TelegramController<br/>Интеграция с Telegram"]
+        end
+        
+        subgraph Services["Services"]
+            NS["NotificationService<br/>Управление уведомлениями"]
+        end
+        
+        subgraph Models["Data Models"]
+            TM["Task Model<br/>Модель задач"]
+            UM["User Model<br/>Модель пользователей"]
+            CM["Category Model<br/>Модель категорий"]
+        end
+        
+        subgraph Routes["API Routes"]
+            TR["Task Routes"]
+            UR["User Routes"]
+            AR["Auth Routes"]
+            CR["Category Routes"]
+        end
+        
+        subgraph Middleware["Middleware"]
+            Auth["Authentication<br/>JWT Verification"]
+        end
+    end
+
+    subgraph Database["PostgreSQL Database"]
+        TU["telegram_users<br/>Таблица пользователей"]
+        CT["categories<br/>Таблица категорий"]
+        TS["tasks<br/>Таблица задач"]
+        NH["notification_history<br/>История уведомлений"]
+    end
+
+    subgraph TelegramBot["Telegram Integration"]
+        Bot["bot.js<br/>Telegram Bot Logic"]
+        BotDB["bot/db.js<br/>Bot Database Operations"]
+    end
+
+    %% Frontend to Backend Connections
+    UI --> JS
+    JS --> Routes
+    
+    %% Routes to Controllers
+    TR --> TC
+    UR --> UC
+    AR --> UC
+    CR --> CC
+    
+    %% Controllers to Models
+    TC --> TM
+    UC --> UM
+    CC --> CM
+    
+    %% Models to Database
+    TM --> TS
+    UM --> TU
+    CM --> CT
+    
+    %% Service Connections
+    TC --> NS
+    NS --> NH
+    
+    %% Telegram Integration
+    TGC --> Bot
+    Bot --> BotDB
+    BotDB --> Database
+    
+    %% Middleware
+    Routes --> Auth
+    Auth --> Controllers

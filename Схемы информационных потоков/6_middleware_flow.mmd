@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant C as Клиент
+    participant R as Routes
+    participant AM as Auth Middleware
+    participant CT as Controllers
+    participant DB as Database
+
+    Note over C,DB: Все защищенные маршруты проходят через Auth Middleware
+
+    %% Успешный сценарий
+    C->>R: Запрос с JWT токеном
+    R->>AM: Проверка токена
+    AM->>DB: Проверка пользователя
+    DB->>AM: Данные пользователя
+    
+    alt Токен валидный
+        AM->>CT: Передача запроса
+        CT->>C: Ответ с данными
+    else Токен невалидный
+        AM->>C: 401 Unauthorized
+    else Токен отсутствует
+        AM->>C: 403 Forbidden
+    end
+
+    Note over R,AM: Маршруты, требующие аутентификации:
+    Note over R,AM: - /api/tasks/*
+    Note over R,AM: - /api/categories/*
+    Note over R,AM: - /api/users/*
+    
+    Note over R,AM: Маршруты без аутентификации:
+    Note over R,AM: - /api/auth/telegram
+    Note over R,AM: - /api/auth/verify 

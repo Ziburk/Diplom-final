@@ -4,11 +4,9 @@ const crypto = require('crypto');
 const config = require('../config/config');
 
 class User {
-    /**
-     * Создает или обновляет пользователя при входе через Telegram
-     * @param {Object} telegramData - Данные пользователя из Telegram
-     * @returns {Promise<Object>} Объект пользователя
-     */
+
+    //Создает или обновляет пользователя при входе через Telegram
+
     static async createOrUpdateFromTelegram(telegramData) {
         const { id: telegram_chat_id, first_name, last_name, username } = telegramData;
 
@@ -53,11 +51,7 @@ class User {
         }
     }
 
-    /**
-     * Получает пользователя по его Telegram chat ID
-     * @param {number} telegramChatId - ID чата пользователя в Telegram
-     * @returns {Promise<Object|null>} Объект пользователя или null
-     */
+    //Получает пользователя по его Telegram chat ID
     static async getByTelegramChatId(telegramChatId) {
         try {
             const query = 'SELECT * FROM telegram_users WHERE telegram_chat_id = $1';
@@ -69,11 +63,7 @@ class User {
         }
     }
 
-    /**
-     * Получает пользователя по его ID в базе данных
-     * @param {number} userId - ID пользователя в базе данных
-     * @returns {Promise<Object|null>} Объект пользователя или null
-     */
+    //Получает пользователя по его ID в базе данных
     static async getById(userId) {
         try {
             const query = 'SELECT * FROM telegram_users WHERE user_id = $1';
@@ -85,12 +75,7 @@ class User {
         }
     }
 
-    /**
-     * Обновляет статус активности пользователя
-     * @param {number} userId - ID пользователя
-     * @param {boolean} isActive - Новый статус активности
-     * @returns {Promise<Object>} Обновленный объект пользователя
-     */
+    //Обновляет статус активности пользователя
     static async updateActiveStatus(userId, isActive) {
         try {
             const query = `
@@ -107,11 +92,7 @@ class User {
         }
     }
 
-    /**
-     * Удаляет пользователя и все его данные
-     * @param {number} userId - ID пользователя
-     * @returns {Promise<boolean>} Успешность удаления
-     */
+    //Удаляет пользователя и все его данные
     static async deleteUser(userId) {
         try {
             // Благодаря каскадному удалению в БД, все связанные данные будут удалены автоматически
@@ -124,11 +105,7 @@ class User {
         }
     }
 
-    /**
-     * Генерирует JWT токен для пользователя
-     * @param {Object} user - Объект пользователя
-     * @returns {string} JWT токен
-     */
+    //Генерирует JWT токен для пользователя
     static generateToken(user) {
         return jwt.sign(
             { 
@@ -140,11 +117,7 @@ class User {
         );
     }
 
-    /**
-     * Проверяет валидность данных от Telegram
-     * @param {Object} telegramData - Данные от Telegram
-     * @returns {boolean} Результат проверки
-     */
+    //Проверяет валидность данных от Telegram
     static validateTelegramHash(telegramData) {
         const { hash, ...data } = telegramData;
         
