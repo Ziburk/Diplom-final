@@ -2354,14 +2354,6 @@ async function addProductivityChartToPdf(docDefinition, productivityType) {
         const totalCompleted = data.reduce((sum, count) => sum + count, 0);
         const avgCompleted = totalCompleted / data.length;
 
-        docDefinition.content.push({
-            text: [
-                `Всего выполнено задач за период: ${totalCompleted}\n`,
-                `Среднее количество выполненных задач в день: ${avgCompleted.toFixed(1)}`
-            ],
-            margin: [0, 0, 0, 20]
-        });
-
     } catch (error) {
         console.error('Ошибка при создании графика продуктивности:', error);
         docDefinition.content.push({
