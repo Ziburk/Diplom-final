@@ -37,12 +37,21 @@
         color: #333;
         font-size: 14px;
     }
+
+    @include media-mobile {
+        min-width: 90vw;
+        padding: 8px;
+    }
 }
 
 .notification-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
+
+    @include media-mobile {
+        gap: 4px;
+    }
 }
 
 .notification-datetime {

@@ -42,7 +42,18 @@
         align-items: center;
     }
 
-
+    @include media-mobile {
+        flex-direction: column;
+        gap: 8px;
+        .category-controls {
+            flex-direction: column;
+            gap: 6px;
+        }
+        .status-filter {
+            flex-direction: column;
+            gap: 6px;
+        }
+    }
 }
 
 .category-manager-modal {
@@ -143,5 +154,9 @@
             }
         }
 
+        @include media-mobile {
+            width: 98%;
+            padding: 8px;
+        }
     }
 }

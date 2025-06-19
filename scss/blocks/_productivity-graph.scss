@@ -2,6 +2,9 @@
     margin: 30px 0 0;
     padding: 20px 0 0;
     border-top: 1px solid #eee;
+    @include media-mobile {
+        padding: 8px 0 0;
+    }
 }
 
 .productivity-controls {
@@ -15,9 +18,15 @@
     margin: 20px 0 0;
     width: 100%;
     overflow-x: auto;
+    @include media-mobile {
+        margin: 8px 0 0;
+    }
 }
 
 #productivityChart {
     width: 100%;
     max-width: 800px;
+    @include media-mobile {
+        max-width: 98vw;
+    }
 }

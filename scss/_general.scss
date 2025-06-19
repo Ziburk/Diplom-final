@@ -8,6 +8,12 @@ body {
     min-width: 570px;
     max-width: 1440px;
     box-sizing: border-box;
+
+    @include media-mobile {
+        width: 100%;
+        min-width: unset;
+        padding: 0 8px;
+    }
 }
 
 .display-block {

@@ -4,6 +4,11 @@
     color: #666;
     white-space: nowrap;
     min-width: 63px;
+    @include media-mobile {
+        margin: 0 0 0 10px;
+        font-size: 12px;
+        min-width: 40px;
+    }
 }
 
 .new-task-due-date {
@@ -58,7 +63,9 @@
     display: flex;
     align-items: center;
     margin: 0 50px;
-
+    @include media-mobile {
+        margin: 0 10px;
+    }
 }
 
 .task-due-date {

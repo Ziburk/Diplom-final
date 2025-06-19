@@ -166,6 +166,22 @@ table {
   margin: 0 0 0 15px;
   color: #fff;
 }
+@media (max-width: 600px) {
+  .header {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    min-height: 50px;
+    padding: 0 8px;
+  }
+  .header-logo {
+    height: 32px;
+  }
+  .header-title {
+    font-size: 16px;
+  }
+}
 
 .telegram-bot-button {
   display: -webkit-box;
@@ -245,6 +261,28 @@ table {
 .main .tab-content.active {
   display: block;
 }
+@media (max-width: 600px) {
+  .main {
+    min-height: 400px;
+  }
+  .main-title {
+    font-size: 22px;
+    padding: 40px 0 20px;
+  }
+  .main .main-navigation {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+            align-items: stretch;
+  }
+  .main .main-nav-item {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}
 
 .new-task {
   display: -webkit-box;
@@ -271,6 +309,25 @@ table {
 }
 .new-task > .task-title-wrapper {
   width: 100%;
+}
+@media (max-width: 600px) {
+  .new-task {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+            align-items: stretch;
+  }
+  .new-task-ico {
+    width: 22px;
+    height: 22px;
+  }
+  .new-task-title {
+    font-size: 14px;
+    width: 100%;
+  }
 }
 
 .add-task-button {
@@ -451,6 +508,39 @@ table {
   height: 20px;
   fill: none;
 }
+@media (max-width: 600px) {
+  .task {
+    min-height: 40px;
+  }
+  .task-wrapper {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: stretch;
+        -ms-flex-align: stretch;
+            align-items: stretch;
+  }
+  .task .task-title {
+    font-size: 14px;
+    max-width: 100%;
+  }
+  .task .task-title-input {
+    font-size: 16px;
+  }
+  .task .button-wrapper {
+    -webkit-box-orient: horizontal;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: row;
+            flex-direction: row;
+    -webkit-box-pack: end;
+        -ms-flex-pack: end;
+            justify-content: flex-end;
+  }
+  .task .task-description {
+    margin: 8px 10px;
+  }
+}
 
 .completed-tasks-title,
 .current-tasks-title {
@@ -585,10 +675,25 @@ table {
   -ms-flex-wrap: wrap;
       flex-wrap: wrap;
 }
+@media (max-width: 600px) {
+  .stats-container {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    gap: 16px;
+  }
+}
 
 .pie-chart-container {
   width: 200px;
   height: 200px;
+}
+@media (max-width: 600px) {
+  .pie-chart-container {
+    width: 120px;
+    height: 120px;
+  }
 }
 
 .stats-legend {
@@ -731,6 +836,29 @@ table {
       -ms-flex-align: center;
           align-items: center;
 }
+@media (max-width: 600px) {
+  .filter-controls {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    gap: 8px;
+  }
+  .filter-controls .category-controls {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    gap: 6px;
+  }
+  .filter-controls .status-filter {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    gap: 6px;
+  }
+}
 
 .category-manager-modal {
   position: fixed;
@@ -827,12 +955,23 @@ table {
   cursor: pointer;
   opacity: 0.7;
 }
+@media (max-width: 600px) {
+  .category-manager-modal .modal-content {
+    width: 98%;
+    padding: 8px;
+  }
+}
 
 /* Стили для редактора */
 .task-description-editor {
   margin-top: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .task-description-editor {
+    margin-top: 4px;
+  }
 }
 
 .editor-buttons {
@@ -841,6 +980,11 @@ table {
   display: -ms-flexbox;
   display: flex;
   gap: 10px;
+}
+@media (max-width: 600px) {
+  .editor-buttons {
+    gap: 4px;
+  }
 }
 
 .editor-buttons button {
@@ -867,6 +1011,12 @@ table {
   background-color: transparent;
   border-radius: 4px;
 }
+@media (max-width: 600px) {
+  .task-description-text {
+    padding: 4px;
+    font-size: 13px;
+  }
+}
 
 .task {
   -webkit-transition: opacity 0.3s ease, -webkit-transform 0.3s ease;
@@ -887,6 +1037,13 @@ table {
   color: #666;
   white-space: nowrap;
   min-width: 63px;
+}
+@media (max-width: 600px) {
+  .task-due-date {
+    margin: 0 0 0 10px;
+    font-size: 12px;
+    min-width: 40px;
+  }
 }
 
 .new-task-due-date {
@@ -954,6 +1111,11 @@ table {
           align-items: center;
   margin: 0 50px;
 }
+@media (max-width: 600px) {
+  .task-date-wrapper {
+    margin: 0 10px;
+  }
+}
 
 .task-due-date {
   font-size: 14px;
@@ -997,6 +1159,11 @@ table {
   padding: 20px 0 0;
   border-top: 1px solid #eee;
 }
+@media (max-width: 600px) {
+  .productivity-section {
+    padding: 8px 0 0;
+  }
+}
 
 .productivity-controls {
   margin: 15px 0;
@@ -1014,10 +1181,20 @@ table {
   width: 100%;
   overflow-x: auto;
 }
+@media (max-width: 600px) {
+  .productivity-chart-container {
+    margin: 8px 0 0;
+  }
+}
 
 #productivityChart {
   width: 100%;
   max-width: 800px;
+}
+@media (max-width: 600px) {
+  #productivityChart {
+    max-width: 98vw;
+  }
 }
 
 .export-modal {
@@ -1047,6 +1224,12 @@ table {
   max-width: 600px;
   max-height: 80vh;
   overflow-y: auto;
+}
+@media (max-width: 600px) {
+  .export-modal .modal-content {
+    padding: 8px;
+    max-width: 98vw;
+  }
 }
 
 .export-options {
@@ -1177,11 +1360,24 @@ table {
   background: rgba(255, 255, 255, 0.2);
   cursor: pointer;
 }
+@media (max-width: 600px) {
+  .logout-button {
+    gap: 4px;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
 
 .logout-icon {
   width: 20px;
   height: 20px;
   color: #fff;
+}
+@media (max-width: 600px) {
+  .logout-icon {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 #telegram-login-container {
@@ -1191,6 +1387,11 @@ table {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+}
+@media (max-width: 600px) {
+  #telegram-login-container {
+    gap: 4px;
+  }
 }
 
 .notification-btn {
@@ -1234,6 +1435,12 @@ table {
   color: #333;
   font-size: 14px;
 }
+@media (max-width: 600px) {
+  .notification-dropdown {
+    min-width: 90vw;
+    padding: 8px;
+  }
+}
 
 .notification-form {
   display: -webkit-box;
@@ -1244,6 +1451,11 @@ table {
       -ms-flex-direction: column;
           flex-direction: column;
   gap: 10px;
+}
+@media (max-width: 600px) {
+  .notification-form {
+    gap: 4px;
+  }
 }
 
 .notification-datetime {
@@ -1397,6 +1609,17 @@ input:checked + .toggle-slider:before {
       -ms-flex-align: center;
           align-items: center;
 }
+@media (max-width: 600px) {
+  .profile-wrapper {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+    -webkit-box-align: start;
+        -ms-flex-align: start;
+            align-items: flex-start;
+  }
+}
 
 #user-profile {
   display: -webkit-box;
@@ -1417,11 +1640,22 @@ input:checked + .toggle-slider:before {
   border: 2px solid #fff;
   background-color: #fff;
 }
+@media (max-width: 600px) {
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
+}
 
 .user-name {
   color: #fff;
   font-weight: 500;
   font-size: 16px;
+}
+@media (max-width: 600px) {
+  .user-name {
+    font-size: 13px;
+  }
 }
 
 body {
@@ -1435,6 +1669,13 @@ body {
   max-width: 1440px;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
+}
+@media (max-width: 600px) {
+  .container {
+    width: 100%;
+    min-width: unset;
+    padding: 0 8px;
+  }
 }
 
 .display-block {

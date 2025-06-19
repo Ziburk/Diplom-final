@@ -17,11 +17,23 @@
         color: black;
         border: none;
         font-family: "Montserrat";
-
     }
 
     &>.task-title-wrapper {
         width: 100%;
+    }
+
+    @include media-mobile {
+        flex-direction: column;
+        align-items: stretch;
+        &-ico {
+            width: 22px;
+            height: 22px;
+        }
+        &-title {
+            font-size: 14px;
+            width: 100%;
+        }
     }
 }
 
@@ -198,6 +210,27 @@
         }
     }
 
+    @include media-mobile {
+        min-height: 40px;
+        &-wrapper {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .task-title {
+            font-size: 14px;
+            max-width: 100%;
+        }
+        .task-title-input {
+            font-size: 16px;
+        }
+        .button-wrapper {
+            flex-direction: row;
+            justify-content: flex-end;
+        }
+        .task-description {
+            margin: 8px 10px;
+        }
+    }
 }
 
 .completed-tasks-title,

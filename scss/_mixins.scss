@@ -4,3 +4,21 @@
     font-weight: $font-weight;
     font-style: $font-style;
 }
+
+@mixin media-mobile {
+  @media (max-width: $breakpoint-mobile) {
+    @content;
+  }
+}
+
+@mixin media-tablet {
+  @media (max-width: $breakpoint-tablet) and (min-width: ($breakpoint-mobile + 1)) {
+    @content;
+  }
+}
+
+@mixin media-desktop {
+  @media (min-width: ($breakpoint-tablet + 1)) {
+    @content;
+  }
+}

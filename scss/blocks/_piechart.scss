@@ -18,11 +18,19 @@
     justify-content: center;
     gap: 40px;
     flex-wrap: wrap;
+    @include media-mobile {
+        flex-direction: column;
+        gap: 16px;
+    }
 }
 
 .pie-chart-container {
     width: 200px;
     height: 200px;
+    @include media-mobile {
+        width: 120px;
+        height: 120px;
+    }
 }
 
 .stats-legend {

@@ -16,15 +16,30 @@
         background: rgba(255, 255, 255, 0.2);
         cursor: pointer;
     }
+
+    @include media-mobile {
+        gap: 4px;
+        font-size: 12px;
+        padding: 4px 8px;
+    }
 }
 
 .logout-icon {
     width: 20px;
     height: 20px;
     color: #fff;
+
+    @include media-mobile {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 #telegram-login-container {
     display: flex;
     align-items: center;
+
+    @include media-mobile {
+        gap: 4px;
+    }
 }

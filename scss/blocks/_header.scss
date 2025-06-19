@@ -22,6 +22,18 @@
         margin: 0 0 0 15px;
         color: #fff;
     }
+
+    @include media-mobile {
+        flex-direction: column;
+        min-height: 50px;
+        padding: 0 8px;
+        &-logo {
+            height: 32px;
+        }
+        &-title {
+            font-size: 16px;
+        }
+    }
 }
 
 .telegram-bot-button {

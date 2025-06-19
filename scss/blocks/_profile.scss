@@ -1,6 +1,10 @@
 .profile-wrapper {
     display: flex;
     align-items: center;
+    @include media-mobile {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 #user-profile {
@@ -16,11 +20,18 @@
     object-fit: cover;
     border: 2px solid #fff;
     background-color: #fff;
+    @include media-mobile {
+        width: 28px;
+        height: 28px;
+    }
 }
 
 .user-name {
     color: #fff;
     font-weight: 500;
     font-size: 16px;
+    @include media-mobile {
+        font-size: 13px;
+    }
 }
 
