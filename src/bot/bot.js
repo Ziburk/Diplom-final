@@ -1101,52 +1101,61 @@ bot.action(/^select_date:(\d{4})-(\d{2})-(\d{2})$/, async (ctx) => {
     }
 });
 
-// Обработчик выбора "Без даты" для новой задачи
+// Обработчик выбора "Без даты" для новой задачи И для изменения даты существующей задачи
 bot.action('select_date:no_date', async (ctx) => {
     try {
-        if (ctx.session?.state !== 'waiting_date') return;
-
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        // Получаем текущие активные задачи для определения порядка
-        const tasks = await db.getUserTasks(user.user_id);
-        
-        // Сдвигаем порядок существующих задач
-        if (tasks.active.length > 0) {
-            const updatePromises = tasks.active.map(t => 
-                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+        if (ctx.session?.state === 'waiting_date') {
+            // Для новой задачи
+            const user = await db.getOrCreateUser(
+                ctx.from.id,
+                ctx.from.username,
+                ctx.from.first_name,
+                ctx.from.last_name
             );
-            await Promise.all(updatePromises);
+
+            // Получаем текущие активные задачи для определения порядка
+            const tasks = await db.getUserTasks(user.user_id);
+            // Сдвигаем порядок существующих задач
+            if (tasks.active.length > 0) {
+                const updatePromises = tasks.active.map(t => 
+                    db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
+                );
+                await Promise.all(updatePromises);
+            }
+            // Создаем задачу с порядком 0 (в начале списка)
+            const task = await db.createTask(
+                user.user_id,
+                ctx.session.newTask.title,
+                ctx.session.newTask.category,
+                null,
+                0 // Устанавливаем order = 0 для новой задачи
+            );
+            const categories = await db.getUserCategories(user.user_id);
+            const category = categories.find(c => c.category_id === ctx.session.newTask.category);
+            await ctx.editMessageText(
+                'Задача успешно добавлена! 👍\n' +
+                `Название: ${task.title}\n` +
+                `Категория: ${category ? category.name : 'Без категории'}\n` +
+                'Дата: Без срока'
+            );
+            delete ctx.session;
+        } else if (ctx.session?.state === 'waiting_new_date') {
+            // Для изменения даты существующей задачи
+            const taskId = ctx.session.taskId;
+            const user = await db.getOrCreateUser(
+                ctx.from.id,
+                ctx.from.username,
+                ctx.from.first_name,
+                ctx.from.last_name
+            );
+            await db.updateTaskDate(taskId, user.user_id, null);
+            await ctx.answerCbQuery('Дата задачи снята');
+            delete ctx.session;
+            await showTaskDetails(ctx, taskId, 'active');
         }
-
-        // Создаем задачу с порядком 0 (в начале списка)
-        const task = await db.createTask(
-            user.user_id,
-            ctx.session.newTask.title,
-            ctx.session.newTask.category,
-            null,
-            0 // Устанавливаем order = 0 для новой задачи
-        );
-
-        const categories = await db.getUserCategories(user.user_id);
-        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
-
-        await ctx.editMessageText(
-            'Задача успешно добавлена! 👍\n' +
-            `Название: ${task.title}\n` +
-            `Категория: ${category ? category.name : 'Без категории'}\n` +
-            'Дата: Без срока'
-        );
-
-        delete ctx.session;
     } catch (error) {
-        console.error('Ошибка при создании задачи:', error);
-        ctx.reply('Произошла ошибка при создании задачи');
+        console.error('Ошибка при обработке "Без даты":', error);
+        ctx.reply('Произошла ошибка при обработке даты');
     }
 });
 
@@ -1269,55 +1278,6 @@ bot.action(/^select_date:(\d+):(\d+):(\d+)$/, async (ctx) => {
             `Название: ${task.title}\n` +
             `Категория: ${category ? category.name : 'Без категории'}\n` +
             `Дата: ${formatDate(task.due_date)}`
-        );
-
-        delete ctx.session;
-    } catch (error) {
-        console.error('Ошибка при создании задачи:', error);
-        ctx.reply('Произошла ошибка при создании задачи');
-    }
-});
-
-// Обработчик выбора "Без даты" для новой задачи
-bot.action('select_date:no_date', async (ctx) => {
-    try {
-        if (ctx.session?.state !== 'waiting_date') return;
-
-        const user = await db.getOrCreateUser(
-            ctx.from.id,
-            ctx.from.username,
-            ctx.from.first_name,
-            ctx.from.last_name
-        );
-
-        // Получаем текущие активные задачи для определения порядка
-        const tasks = await db.getUserTasks(user.user_id);
-        
-        // Сдвигаем порядок существующих задач
-        if (tasks.active.length > 0) {
-            const updatePromises = tasks.active.map(t => 
-                db.updateTaskOrder(t.task_id, (t.order || 0) + 1)
-            );
-            await Promise.all(updatePromises);
-        }
-
-        // Создаем задачу с порядком 0 (в начале списка)
-        const task = await db.createTask(
-            user.user_id,
-            ctx.session.newTask.title,
-            ctx.session.newTask.category,
-            null,
-            0 // Устанавливаем order = 0 для новой задачи
-        );
-
-        const categories = await db.getUserCategories(user.user_id);
-        const category = categories.find(c => c.category_id === ctx.session.newTask.category);
-
-        await ctx.editMessageText(
-            'Задача успешно добавлена! 👍\n' +
-            `Название: ${task.title}\n` +
-            `Категория: ${category ? category.name : 'Без категории'}\n` +
-            'Дата: Без срока'
         );
 
         delete ctx.session;
