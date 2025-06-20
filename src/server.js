@@ -25,7 +25,10 @@ app.use(morgan('dev')); // Логирование запросов
 app.use(express.json()); // Парсинг JSON
 app.use(express.urlencoded({ extended: true })); // Парсинг URL-encoded bodies
 
-// Статические файлы
+// Применяем middleware для авторизации ДО отдачи статики
+app.use(authMiddleware);
+
+// Статические файлы (теперь после authMiddleware)
 app.use(express.static(path.join(__dirname, '..'))); // Корневая директория проекта
 app.use('/css', express.static(path.join(__dirname, '../css')));
 app.use('/js', express.static(path.join(__dirname, '../javascript')));
@@ -103,9 +106,6 @@ function authMiddleware(req, res, next) {
 
     next();
 }
-
-// Применяем middleware для авторизации
-app.use(authMiddleware);
 
 // Маршрут для авторизации через Telegram
 app.post('/api/auth/telegram', async (req, res) => {
