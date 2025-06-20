@@ -6,6 +6,8 @@
     <title>To-Do List - Вход</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/login.css">
+    <!-- Фоновая подгрузка bundle.js -->
+    <link rel="preload" href="dist/bundle.js" as="script">
 </head>
 <body>
     <div class="container">
@@ -115,6 +117,16 @@
                 localStorage.removeItem('telegramUser');
             });
         }
+
+        // Фоновая подгрузка bundle.js после загрузки страницы
+        window.addEventListener('load', function() {
+            var preloadScript = document.createElement('script');
+            preloadScript.src = 'dist/bundle.js';
+            preloadScript.async = true;
+            preloadScript.defer = true;
+            preloadScript.setAttribute('data-preload', 'true'); // для отладки
+            document.body.appendChild(preloadScript);
+        });
     </script>
 </body>
 </html> 
