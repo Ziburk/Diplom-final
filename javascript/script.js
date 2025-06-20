@@ -2063,6 +2063,23 @@ function getTasksByDateRange() {
 
 // Функция генерации PDF
 async function generatePdf() {
+    // Динамически загружаем pdfmake и vfs_fonts, если они ещё не загружены
+    if (typeof window.pdfMake === 'undefined') {
+        await new Promise((resolve, reject) => {
+            const script1 = document.createElement('script');
+            script1.src = 'node_modules/pdfmake/build/pdfmake.min.js';
+            script1.onload = () => {
+                const script2 = document.createElement('script');
+                script2.src = 'node_modules/pdfmake/build/vfs_fonts.js';
+                script2.onload = resolve;
+                script2.onerror = reject;
+                document.body.appendChild(script2);
+            };
+            script1.onerror = reject;
+            document.body.appendChild(script1);
+        });
+    }
+
     // Получаем задачи для экспорта
     const exportTasks = getTasksForExport();
 
