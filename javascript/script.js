@@ -2063,23 +2063,6 @@ function getTasksByDateRange() {
 
 // Функция генерации PDF
 async function generatePdf() {
-    // Динамически загружаем pdfmake и vfs_fonts, если они ещё не загружены
-    if (typeof window.pdfMake === 'undefined') {
-        await new Promise((resolve, reject) => {
-            const script1 = document.createElement('script');
-            script1.src = 'node_modules/pdfmake/build/pdfmake.min.js';
-            script1.onload = () => {
-                const script2 = document.createElement('script');
-                script2.src = 'node_modules/pdfmake/build/vfs_fonts.js';
-                script2.onload = resolve;
-                script2.onerror = reject;
-                document.body.appendChild(script2);
-            };
-            script1.onerror = reject;
-            document.body.appendChild(script1);
-        });
-    }
-
     // Получаем задачи для экспорта
     const exportTasks = getTasksForExport();
 
@@ -2444,5 +2427,23 @@ function restoreFiltersState(state) {
     document.getElementById('date-sort').value = state.dateSort;
     document.querySelector(`input[name="status"][value="${state.status}"]`).checked = true;
 }
+
+// После полной загрузки страницы начинаем подгружать pdfmake и vfs_fonts.js в фоне
+window.addEventListener('load', () => {
+    // Проверяем, не загружены ли уже скрипты
+    if (!window.pdfMake) {
+        const pdfmakeScript = document.createElement('script');
+        pdfmakeScript.src = './node_modules/pdfmake/build/pdfmake.min.js';
+        pdfmakeScript.async = true;
+        document.body.appendChild(pdfmakeScript);
+
+        pdfmakeScript.onload = () => {
+            const vfsScript = document.createElement('script');
+            vfsScript.src = './node_modules/pdfmake/build/vfs_fonts.js';
+            vfsScript.async = true;
+            document.body.appendChild(vfsScript);
+        };
+    }
+});
 
 window.onload = init;
