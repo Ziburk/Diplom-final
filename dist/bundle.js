@@ -60911,6 +60911,25 @@ function _generatePdf() {
     return _regenerator().w(function (_context25) {
       while (1) switch (_context25.n) {
         case 0:
+          if (!(typeof window.pdfMake === 'undefined')) {
+            _context25.n = 1;
+            break;
+          }
+          _context25.n = 1;
+          return new Promise(function (resolve, reject) {
+            var script1 = document.createElement('script');
+            script1.src = 'node_modules/pdfmake/build/pdfmake.min.js';
+            script1.onload = function () {
+              var script2 = document.createElement('script');
+              script2.src = 'node_modules/pdfmake/build/vfs_fonts.js';
+              script2.onload = resolve;
+              script2.onerror = reject;
+              document.body.appendChild(script2);
+            };
+            script1.onerror = reject;
+            document.body.appendChild(script1);
+          });
+        case 1:
           // Получаем задачи для экспорта
           exportTasks = getTasksForExport(); // Создаем документ
           docDefinition = {
@@ -61009,18 +61028,18 @@ function _generatePdf() {
           // Добавляем график продуктивности, если выбрано
           productivityType = document.getElementById('export-productivity-type').value;
           if (!(productivityType !== EXPORT_PRODUCTIVITY_TYPES.NONE)) {
-            _context25.n = 1;
+            _context25.n = 2;
             break;
           }
-          _context25.n = 1;
+          _context25.n = 2;
           return addProductivityChartToPdf(docDefinition, productivityType);
-        case 1:
+        case 2:
           // Генерируем PDF
           pdfMake.createPdf(docDefinition).download('tasks_export.pdf');
 
           // Закрываем модальное окно
           (_document$querySelect = document.querySelector('.export-modal')) === null || _document$querySelect === void 0 || _document$querySelect.remove();
-        case 2:
+        case 3:
           return _context25.a(2);
       }
     }, _callee25);
